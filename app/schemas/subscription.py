@@ -63,4 +63,5 @@ class UsageStatsResponse(BaseModel):
 
 class UpgradeRequest(BaseModel):
     new_plan: PlanType
-    stripe_payment_method_id: Optional[str] = None
+    external_payment_id: Optional[str] = None  # ID de votre service de paiement
+    payment_reference: Optional[str] = None    # Référence de transaction

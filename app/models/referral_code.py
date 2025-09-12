@@ -1,5 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Index, DECIMAL
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, DECIMAL, Index
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -7,9 +6,9 @@ from app.models.base import BaseModel
 class ReferralCode(BaseModel):
     __tablename__ = "referral_codes"
     
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"))
     code = Column(String(50), unique=True, nullable=False, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     
     reward_type = Column(String(50))
     reward_value = Column(DECIMAL(10, 2))

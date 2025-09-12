@@ -8,7 +8,7 @@ from app.models.project import Project
 from app.models.user import User
 from app.models.dynamic_link import DynamicLink
 from app.core.subscription_plans import PlanType, PLAN_LIMITS, PLAN_FEATURES
-from app.core.exceptions import HTTPException
+from fastapi import HTTPException
 
 class SubscriptionService:
     
@@ -30,9 +30,16 @@ class SubscriptionService:
     def check_project_limit(db: Session, organization_id: str) -> bool:
         subscription = SubscriptionService.get_organization_subscription(db, organization_id)
         if not subscription:
-            return False
+            # Si pas d'abonnement, vérifier le plan de l'organisation directement
+            from app.models.organization import Organization
+            org = db.query(Organization).filter(Organization.id == organization_id).first()
+            if not org:
+                return False
+            plan_type = PlanType.STARTER if org.plan_type == "free" else PlanType(org.plan_type)
+        else:
+            plan_type = PlanType(subscription.plan_type)
             
-        plan_limits = SubscriptionService.get_plan_limits(PlanType(subscription.plan_type))
+        plan_limits = SubscriptionService.get_plan_limits(plan_type)
         if plan_limits.max_projects is None:
             return True
             
@@ -46,9 +53,16 @@ class SubscriptionService:
     def check_member_limit(db: Session, organization_id: str) -> bool:
         subscription = SubscriptionService.get_organization_subscription(db, organization_id)
         if not subscription:
-            return False
+            # Si pas d'abonnement, vérifier le plan de l'organisation directement
+            from app.models.organization import Organization
+            org = db.query(Organization).filter(Organization.id == organization_id).first()
+            if not org:
+                return False
+            plan_type = PlanType.STARTER if org.plan_type == "free" else PlanType(org.plan_type)
+        else:
+            plan_type = PlanType(subscription.plan_type)
             
-        plan_limits = SubscriptionService.get_plan_limits(PlanType(subscription.plan_type))
+        plan_limits = SubscriptionService.get_plan_limits(plan_type)
         
         current_members = db.query(User).filter(
             User.organization_id == organization_id
@@ -81,9 +95,16 @@ class SubscriptionService:
     def has_feature_access(db: Session, organization_id: str, feature: str) -> bool:
         subscription = SubscriptionService.get_organization_subscription(db, organization_id)
         if not subscription:
-            return False
+            # Si pas d'abonnement, vérifier le plan de l'organisation directement
+            from app.models.organization import Organization
+            org = db.query(Organization).filter(Organization.id == organization_id).first()
+            if not org:
+                return False
+            plan_type = PlanType.STARTER if org.plan_type == "free" else PlanType(org.plan_type)
+        else:
+            plan_type = PlanType(subscription.plan_type)
             
-        plan_limits = SubscriptionService.get_plan_limits(PlanType(subscription.plan_type))
+        plan_limits = SubscriptionService.get_plan_limits(plan_type)
         
         feature_map = {
             "full_analytics": plan_limits.has_full_analytics,
@@ -161,7 +182,7 @@ class SubscriptionService:
         db: Session, 
         organization_id: str, 
         new_plan: PlanType,
-        stripe_subscription_id: Optional[str] = None
+        external_payment_id: Optional[str] = None
     ) -> Subscription:
         subscription = SubscriptionService.get_organization_subscription(db, organization_id)
         if not subscription:
@@ -171,7 +192,9 @@ class SubscriptionService:
         
         subscription.plan_type = new_plan.value
         subscription.amount = plan_features["price"]
-        subscription.stripe_subscription_id = stripe_subscription_id
+        # Stocker la référence de paiement externe si fournie
+        if external_payment_id:
+            subscription.stripe_subscription_id = external_payment_id  # Réutiliser ce champ pour l'ID externe
         
         db.commit()
         db.refresh(subscription)

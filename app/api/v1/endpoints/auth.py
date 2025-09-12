@@ -77,7 +77,9 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        expires_in=900
+        expires_in=900,
+        organization_name=organization.name,
+        plan_type=organization.plan_type
     )
 
 @router.post("/login", response_model=TokenResponse)
@@ -95,7 +97,9 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        expires_in=900
+        expires_in=900,
+        organization_name=user.organization.name,
+        plan_type=user.organization.plan_type
     )
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -113,7 +117,9 @@ async def refresh_token(token_data: TokenRefresh, db: Session = Depends(get_db))
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        expires_in=900
+        expires_in=900,
+        organization_name=user.organization.name,
+        plan_type=user.organization.plan_type
     )
 
 @router.get("/me", response_model=UserProfile)

@@ -11,11 +11,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/synctra"
+    DATABASE_URL: str = "sqlite:///./synctra.db"
     REDIS_URL: str = "redis://localhost:6379"
     
     ALLOWED_HOSTS: List[str] = ["*"]
-    DEBUG: bool = False
+    DEBUG: bool = True
     
     BCRYPT_ROUNDS: int = 12
     

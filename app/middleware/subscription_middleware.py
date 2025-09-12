@@ -5,7 +5,7 @@ from typing import Callable
 
 from app.core.database import get_db
 from app.services.subscription_service import SubscriptionService
-from app.core.auth import get_current_user
+from app.core.deps import get_current_active_user
 
 class SubscriptionMiddleware:
     

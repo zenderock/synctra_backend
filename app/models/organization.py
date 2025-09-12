@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, JSON
+from sqlalchemy import Column, String, Text, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -9,7 +9,7 @@ class Organization(BaseModel):
     name = Column(String(255), nullable=False)
     slug = Column(String(100), unique=True, nullable=False, index=True)
     domain = Column(String(255))
-    plan_type = Column(String(50), default='starter')
+    plan_type = Column(String(50), default='free')
     settings = Column(JSON, default={})
     
     users = relationship("User", back_populates="organization")

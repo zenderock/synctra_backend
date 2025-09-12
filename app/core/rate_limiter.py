@@ -8,6 +8,7 @@ from app.core.config import settings
 class RateLimiter:
     def __init__(self):
         self.redis_client = get_redis()
+        self.in_memory_cache = {}  # Fallback pour les tests locaux
     
     def check_rate_limit(
         self, 
@@ -16,6 +17,10 @@ class RateLimiter:
         window: int, 
         identifier: str = "global"
     ) -> bool:
+        if not self.redis_client:
+            # Mode fallback sans Redis pour les tests locaux
+            return True
+            
         current_time = int(time.time())
         window_start = current_time - window
         

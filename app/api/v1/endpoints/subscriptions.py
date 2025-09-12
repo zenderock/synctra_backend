@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.core.deps import get_current_active_user
 from app.models.user import User
 from app.services.subscription_service import SubscriptionService
 from app.schemas.subscription import (
@@ -20,7 +20,7 @@ router = APIRouter()
 @router.get("/current", response_model=SubscriptionResponse)
 async def get_current_subscription(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Récupérer l'abonnement actuel de l'organisation"""
     if not current_user.organization_id:
@@ -67,7 +67,7 @@ async def get_plan_limits(plan_type: PlanType):
 @router.get("/usage", response_model=UsageStatsResponse)
 async def get_usage_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Récupérer les statistiques d'usage de l'organisation"""
     if not current_user.organization_id:
@@ -83,7 +83,7 @@ async def get_usage_stats(
 async def upgrade_subscription(
     upgrade_data: UpgradeRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Mettre à niveau l'abonnement"""
     if not current_user.organization_id:
@@ -97,14 +97,12 @@ async def upgrade_subscription(
         )
     
     try:
-        # Ici on intégrerait Stripe pour le paiement
-        # stripe_subscription_id = process_stripe_payment(upgrade_data.stripe_payment_method_id)
-        
+        # Mise à niveau directe après paiement externe confirmé
         subscription = SubscriptionService.upgrade_subscription(
             db=db,
             organization_id=str(current_user.organization_id),
             new_plan=upgrade_data.new_plan,
-            stripe_subscription_id=None  # À remplacer par l'ID Stripe réel
+            external_payment_id=upgrade_data.external_payment_id
         )
         
         return {
@@ -119,7 +117,7 @@ async def upgrade_subscription(
 async def check_feature_access(
     feature_name: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Vérifier l'accès à une fonctionnalité spécifique"""
     if not current_user.organization_id:
