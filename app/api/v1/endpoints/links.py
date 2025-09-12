@@ -12,6 +12,7 @@ from app.schemas.dynamic_link import DynamicLinkCreate, DynamicLinkUpdate, Dynam
 from app.services.link_generator import LinkGenerator
 from app.core.config import settings
 from app.core.exceptions import ValidationException, NotFoundException
+from app.services.subscription_service import SubscriptionService
 
 router = APIRouter()
 
@@ -41,6 +42,13 @@ async def create_link(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
+    # Vérifier les limites de liens pour le projet
+    if not SubscriptionService.check_links_limit(db, str(project.id)):
+        raise HTTPException(
+            status_code=403,
+            detail="Limite de liens atteinte pour ce projet selon votre plan actuel."
+        )
+    
     short_code = LinkGenerator.generate_unique_short_code(db)
     
     utm_params = {}

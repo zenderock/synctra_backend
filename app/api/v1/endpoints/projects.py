@@ -11,6 +11,8 @@ from app.models.organization import Organization
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.core.exceptions import ValidationException, NotFoundException
+from app.services.subscription_service import SubscriptionService
+from app.middleware.subscription_middleware import require_limit_check
 
 router = APIRouter()
 
@@ -39,6 +41,21 @@ async def create_project(
     current_user: User = Depends(get_current_active_user),
     current_organization: Organization = Depends(get_current_organization)
 ):
+    # Vérifier les limites d'abonnement
+    if not SubscriptionService.check_project_limit(db, str(current_organization.id)):
+        raise HTTPException(
+            status_code=403,
+            detail="Limite de projets atteinte pour votre plan actuel. Mettez à niveau votre abonnement."
+        )
+    
+    # Vérifier l'accès au domaine personnalisé
+    if project_data.custom_domain:
+        if not SubscriptionService.has_feature_access(db, str(current_organization.id), "custom_domain"):
+            raise HTTPException(
+                status_code=403,
+                detail="Les domaines personnalisés nécessitent un plan Plus."
+            )
+    
     project_id = generate_project_id(project_data.name)
     existing_project = db.query(Project).filter(Project.project_id == project_id).first()
     if existing_project:
