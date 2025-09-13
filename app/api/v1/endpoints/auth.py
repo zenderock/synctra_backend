@@ -23,6 +23,7 @@ from app.schemas.auth import (
     TokenResponse, 
     UserProfile
 )
+from app.schemas.response import ApiResponse
 from app.core.exceptions import ValidationException, AuthenticationException
 
 router = APIRouter()
@@ -133,4 +134,10 @@ async def get_current_user_profile(current_user: User = Depends(get_current_user
         role=current_user.role,
         is_verified=current_user.is_verified,
         organization_id=str(current_user.organization_id)
+    )
+
+@router.post("/logout")
+async def logout(current_user: User = Depends(get_current_user)):
+    return ApiResponse.success(
+        message="Déconnexion réussie"
     )

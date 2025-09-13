@@ -43,6 +43,7 @@ async def get_projects(
             "custom_domain": project.custom_domain,
             "status": project.status,
             "is_active": project.is_active,
+            "settings": project.settings or {},
             "created_at": project.created_at.isoformat() if project.created_at else None,
             "updated_at": project.updated_at.isoformat() if project.updated_at else None
         })
@@ -98,6 +99,7 @@ async def create_project(
             "custom_domain": project.custom_domain,
             "status": project.status,
             "is_active": project.is_active,
+            "settings": project.settings or {},
             "created_at": project.created_at.isoformat() if project.created_at else None,
             "updated_at": project.updated_at.isoformat() if project.updated_at else None
         },
@@ -117,6 +119,7 @@ async def get_project(
             "custom_domain": project.custom_domain,
             "status": project.status,
             "is_active": project.is_active,
+            "settings": project.settings or {},
             "created_at": project.created_at.isoformat() if project.created_at else None,
             "updated_at": project.updated_at.isoformat() if project.updated_at else None
         },
@@ -146,6 +149,7 @@ async def update_project(
             "custom_domain": project.custom_domain,
             "status": project.status,
             "is_active": project.is_active,
+            "settings": project.settings or {},
             "created_at": project.created_at.isoformat() if project.created_at else None,
             "updated_at": project.updated_at.isoformat() if project.updated_at else None
         },
