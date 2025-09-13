@@ -63,7 +63,7 @@ async def create_project(
     if not SubscriptionService.check_project_limit(db, str(current_organization.id)):
         return ApiResponse.error(
             message="Limite de projets atteinte pour votre plan actuel. Mettez à niveau votre abonnement.",
-            status_code=403
+            status_code=429
         )
     
     # Vérifier l'accès au domaine personnalisé
@@ -71,7 +71,7 @@ async def create_project(
         if not SubscriptionService.has_feature_access(db, str(current_organization.id), "custom_domain"):
             return ApiResponse.error(
                 message="Les domaines personnalisés nécessitent un plan Plus.",
-                status_code=403
+                status_code=402
             )
     
     api_key = generate_api_key()

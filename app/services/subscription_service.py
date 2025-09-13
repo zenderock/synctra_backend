@@ -78,9 +78,16 @@ class SubscriptionService:
             
         subscription = SubscriptionService.get_organization_subscription(db, project.organization_id)
         if not subscription:
-            return False
+            # Si pas d'abonnement, vérifier le plan de l'organisation directement
+            from app.models.organization import Organization
+            org = db.query(Organization).filter(Organization.id == project.organization_id).first()
+            if not org:
+                return False
+            plan_type = PlanType.STARTER if org.plan_type == "free" else PlanType(org.plan_type)
+        else:
+            plan_type = PlanType(subscription.plan_type)
             
-        plan_limits = SubscriptionService.get_plan_limits(PlanType(subscription.plan_type))
+        plan_limits = SubscriptionService.get_plan_limits(plan_type)
         if plan_limits.max_links_per_project is None:
             return True
             
