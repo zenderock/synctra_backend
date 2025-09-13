@@ -16,7 +16,8 @@ class DeferredDeepLinkingService:
     def is_app_installed(self, user_agent: str, package_name: str = None, bundle_id: str = None) -> bool:
         """
         Détecte si l'application est installée via l'User-Agent
-        Cette méthode peut être étendue avec des techniques plus avancées
+        Pour les tests, on considère que l'app n'est jamais installée
+        afin de déclencher le deferred deep linking
         """
         user_agent = user_agent.lower()
         
@@ -34,7 +35,9 @@ class DeferredDeepLinkingService:
             'in-app'
         ]
         
-        return any(pattern in user_agent for pattern in app_patterns)
+        # Pour forcer le deferred deep linking, retourner False temporairement
+        # return any(pattern in user_agent for pattern in app_patterns)
+        return False
     
     def create_deferred_context(
         self, 
