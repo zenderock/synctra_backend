@@ -9,13 +9,15 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.dynamic_link import DynamicLink
 from app.schemas.dynamic_link import DynamicLinkCreate, DynamicLinkUpdate, DynamicLinkResponse
+from app.schemas.response import ApiResponse
 from app.services.link_generator import LinkGenerator
 from app.core.config import settings
 from app.core.exceptions import ValidationException, NotFoundException
+from app.services.subscription_service import SubscriptionService
 
 router = APIRouter()
 
-@router.get("/", response_model=List[DynamicLinkResponse])
+@router.get("/")
 async def get_links(
     project: Project = Depends(get_project_by_id),
     db: Session = Depends(get_db),
@@ -26,21 +28,55 @@ async def get_links(
         DynamicLink.project_id == project.id
     ).offset(skip).limit(limit).all()
     
+    links_data = []
     for link in links:
-        link.short_url = LinkGenerator.build_short_url(
+        short_url = LinkGenerator.build_short_url(
             link.short_code, 
             project.custom_domain or settings.DOMAIN
         )
+        links_data.append({
+            "id": str(link.id),
+            "short_code": link.short_code,
+            "short_url": short_url,
+            "original_url": link.original_url,
+            "title": link.title,
+            "description": link.description,
+            "android_package": link.android_package,
+            "android_fallback_url": link.android_fallback_url,
+            "ios_bundle_id": link.ios_bundle_id,
+            "ios_fallback_url": link.ios_fallback_url,
+            "desktop_fallback_url": link.desktop_fallback_url,
+            "utm_source": link.utm_source,
+            "utm_medium": link.utm_medium,
+            "utm_campaign": link.utm_campaign,
+            "utm_term": link.utm_term,
+            "utm_content": link.utm_content,
+            "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+            "is_active": link.is_active,
+            "click_count": len(link.clicks) if link.clicks else 0,
+            "created_at": link.created_at.isoformat() if link.created_at else None,
+            "updated_at": link.updated_at.isoformat() if link.updated_at else None
+        })
     
-    return links
+    return ApiResponse.success(
+        data=links_data,
+        message="Liens récupérés avec succès"
+    )
 
-@router.post("/", response_model=DynamicLinkResponse)
+@router.post("/")
 async def create_link(
     link_data: DynamicLinkCreate,
     project: Project = Depends(get_project_by_id),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
+    # Vérifier les limites de liens pour le projet
+    if not SubscriptionService.check_links_limit(db, str(project.id)):
+        return ApiResponse.error(
+            message="Limite de liens atteinte pour ce projet selon votre plan actuel.",
+            status_code=429
+        )
+    
     short_code = LinkGenerator.generate_unique_short_code(db)
     
     utm_params = {}
@@ -81,14 +117,39 @@ async def create_link(
     db.commit()
     db.refresh(link)
     
-    link.short_url = LinkGenerator.build_short_url(
+    short_url = LinkGenerator.build_short_url(
         link.short_code, 
         project.custom_domain or settings.DOMAIN
     )
     
-    return link
+    return ApiResponse.success(
+        data={
+            "id": str(link.id),
+            "short_code": link.short_code,
+            "short_url": short_url,
+            "original_url": link.original_url,
+            "title": link.title,
+            "description": link.description,
+            "android_package": link.android_package,
+            "android_fallback_url": link.android_fallback_url,
+            "ios_bundle_id": link.ios_bundle_id,
+            "ios_fallback_url": link.ios_fallback_url,
+            "desktop_fallback_url": link.desktop_fallback_url,
+            "utm_source": link.utm_source,
+            "utm_medium": link.utm_medium,
+            "utm_campaign": link.utm_campaign,
+            "utm_term": link.utm_term,
+            "utm_content": link.utm_content,
+            "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+            "is_active": link.is_active,
+            "click_count": len(link.clicks) if link.clicks else 0,
+            "created_at": link.created_at.isoformat() if link.created_at else None,
+            "updated_at": link.updated_at.isoformat() if link.updated_at else None
+        },
+        message="Lien créé avec succès"
+    )
 
-@router.get("/{link_id}", response_model=DynamicLinkResponse)
+@router.get("/{link_id}")
 async def get_link(
     link_id: str,
     project: Project = Depends(get_project_by_id),
@@ -100,16 +161,44 @@ async def get_link(
     ).first()
     
     if not link:
-        raise NotFoundException("Lien non trouvé")
+        return ApiResponse.error(
+            message="Lien non trouvé",
+            status_code=404
+        )
     
-    link.short_url = LinkGenerator.build_short_url(
+    short_url = LinkGenerator.build_short_url(
         link.short_code, 
         project.custom_domain or settings.DOMAIN
     )
     
-    return link
+    return ApiResponse.success(
+        data={
+            "id": str(link.id),
+            "short_code": link.short_code,
+            "short_url": short_url,
+            "original_url": link.original_url,
+            "title": link.title,
+            "description": link.description,
+            "android_package": link.android_package,
+            "android_fallback_url": link.android_fallback_url,
+            "ios_bundle_id": link.ios_bundle_id,
+            "ios_fallback_url": link.ios_fallback_url,
+            "desktop_fallback_url": link.desktop_fallback_url,
+            "utm_source": link.utm_source,
+            "utm_medium": link.utm_medium,
+            "utm_campaign": link.utm_campaign,
+            "utm_term": link.utm_term,
+            "utm_content": link.utm_content,
+            "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+            "is_active": link.is_active,
+            "click_count": len(link.clicks) if link.clicks else 0,
+            "created_at": link.created_at.isoformat() if link.created_at else None,
+            "updated_at": link.updated_at.isoformat() if link.updated_at else None
+        },
+        message="Lien récupéré avec succès"
+    )
 
-@router.put("/{link_id}", response_model=DynamicLinkResponse)
+@router.put("/{link_id}")
 async def update_link(
     link_id: str,
     link_data: DynamicLinkUpdate,
@@ -122,7 +211,10 @@ async def update_link(
     ).first()
     
     if not link:
-        raise NotFoundException("Lien non trouvé")
+        return ApiResponse.error(
+            message="Lien non trouvé",
+            status_code=404
+        )
     
     update_data = link_data.dict(exclude_unset=True)
     
@@ -134,12 +226,37 @@ async def update_link(
     db.commit()
     db.refresh(link)
     
-    link.short_url = LinkGenerator.build_short_url(
+    short_url = LinkGenerator.build_short_url(
         link.short_code, 
         project.custom_domain or settings.DOMAIN
     )
     
-    return link
+    return ApiResponse.success(
+        data={
+            "id": str(link.id),
+            "short_code": link.short_code,
+            "short_url": short_url,
+            "original_url": link.original_url,
+            "title": link.title,
+            "description": link.description,
+            "android_package": link.android_package,
+            "android_fallback_url": link.android_fallback_url,
+            "ios_bundle_id": link.ios_bundle_id,
+            "ios_fallback_url": link.ios_fallback_url,
+            "desktop_fallback_url": link.desktop_fallback_url,
+            "utm_source": link.utm_source,
+            "utm_medium": link.utm_medium,
+            "utm_campaign": link.utm_campaign,
+            "utm_term": link.utm_term,
+            "utm_content": link.utm_content,
+            "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+            "is_active": link.is_active,
+            "click_count": len(link.clicks) if link.clicks else 0,
+            "created_at": link.created_at.isoformat() if link.created_at else None,
+            "updated_at": link.updated_at.isoformat() if link.updated_at else None
+        },
+        message="Lien mis à jour avec succès"
+    )
 
 @router.delete("/{link_id}")
 async def delete_link(
@@ -153,9 +270,14 @@ async def delete_link(
     ).first()
     
     if not link:
-        raise NotFoundException("Lien non trouvé")
+        return ApiResponse.error(
+            message="Lien non trouvé",
+            status_code=404
+        )
     
     db.delete(link)
     db.commit()
     
-    return {"message": "Lien supprimé avec succès"}
+    return ApiResponse.success(
+        message="Lien supprimé avec succès"
+    )

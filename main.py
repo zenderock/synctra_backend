@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 import time
 import uvicorn
 
@@ -19,8 +21,8 @@ app = FastAPI(
     title="Synctra API",
     description="API pour la gestion des liens dynamiques et analytics",
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 app.add_middleware(
@@ -46,6 +48,26 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for error in exc.errors():
+        field_name = " -> ".join(str(loc) for loc in error["loc"])
+        errors.append({
+            "field": field_name,
+            "message": error["msg"],
+            "type": error["type"]
+        })
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "VALIDATION_ERROR",
+            "message": "Données invalides",
+            "details": errors
+        }
+    )
+
 @app.exception_handler(SynctraException)
 async def synctra_exception_handler(request: Request, exc: SynctraException):
     return JSONResponse(
@@ -53,12 +75,16 @@ async def synctra_exception_handler(request: Request, exc: SynctraException):
         content={"error": exc.error_code, "message": exc.message, "details": exc.details}
     )
 
+# Routes API d'abord
 app.include_router(api_router, prefix="/api/v1")
-app.include_router(redirect_router)
 
+# Route de santé
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": time.time()}
+
+# Le router de redirection doit être en dernier pour éviter de capturer les autres routes
+app.include_router(redirect_router)
 
 if __name__ == "__main__":
     uvicorn.run(

@@ -1,25 +1,27 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 
 class UserRegister(BaseModel):
-    email: EmailStr
-    password: str
-    first_name: str
-    last_name: str
-    organization_name: str
+    email: EmailStr = Field(..., description="Adresse email valide")
+    password: str = Field(..., min_length=8, description="Mot de passe (minimum 8 caractères)")
+    first_name: str = Field(..., min_length=1, max_length=100, description="Prénom")
+    last_name: str = Field(..., min_length=1, max_length=100, description="Nom de famille")
+    organization_name: str = Field(..., min_length=1, max_length=255, description="Nom de l'organisation")
 
 class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+    email: EmailStr = Field(..., description="Adresse email")
+    password: str = Field(..., description="Mot de passe")
 
 class TokenRefresh(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(..., description="Token de rafraîchissement")
 
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+    organization_name: str
+    plan_type: str
 
 class UserProfile(BaseModel):
     id: str

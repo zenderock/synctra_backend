@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, JSON
+from sqlalchemy import Column, String, Text, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -14,3 +14,4 @@ class Organization(BaseModel):
     
     users = relationship("User", back_populates="organization")
     projects = relationship("Project", back_populates="organization")
+    subscription = relationship("Subscription", back_populates="organization", uselist=False)

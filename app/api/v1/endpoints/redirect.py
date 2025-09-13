@@ -31,10 +31,20 @@ async def redirect_link(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    # Éviter les requêtes pour les fichiers système
+    if short_code in ["favicon.ico", "robots.txt", "sitemap.xml", "docs", "redoc", "openapi.json"]:
+        raise NotFoundException("Ressource non trouvée")
+    
     redis_client = get_redis()
     
     cache_key = f"link:{short_code}"
-    cached_link = redis_client.get(cache_key)
+    cached_link = None
+    
+    if redis_client:
+        try:
+            cached_link = redis_client.get(cache_key)
+        except:
+            cached_link = None
     
     if cached_link:
         import json
@@ -61,7 +71,12 @@ async def redirect_link(
             "desktop_fallback_url": link.desktop_fallback_url
         }
         
-        redis_client.setex(cache_key, 3600, json.dumps(link_data))
+        if redis_client:
+            try:
+                import json
+                redis_client.setex(cache_key, 3600, json.dumps(link_data))
+            except:
+                pass
     
     user_agent = request.headers.get("User-Agent", "")
     platform_info = PlatformDetector.detect_platform(user_agent)

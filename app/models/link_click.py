@@ -1,5 +1,4 @@
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Index, DECIMAL, func
-from sqlalchemy.dialects.postgresql import UUID, INET
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Boolean, DECIMAL, func, Index
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -7,9 +6,8 @@ from app.models.base import BaseModel
 class LinkClick(BaseModel):
     __tablename__ = "link_clicks"
     
-    link_id = Column(UUID(as_uuid=True), ForeignKey("dynamic_links.id"))
-    
-    ip_address = Column(INET)
+    link_id = Column(String(36), ForeignKey("dynamic_links.id"), nullable=False)
+    ip_address = Column(String(45))  # IPv6 max length
     user_agent = Column(Text)
     referer = Column(Text)
     

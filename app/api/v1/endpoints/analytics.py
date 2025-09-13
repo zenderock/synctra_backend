@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
@@ -8,20 +8,32 @@ import io
 from fastapi.responses import StreamingResponse
 
 from app.core.database import get_db
-from app.core.deps import get_project_by_id
+from app.core.deps import get_project_by_id, get_current_active_user
 from app.models.project import Project
 from app.models.dynamic_link import DynamicLink
 from app.models.link_click import LinkClick
+from app.models.user import User
 from app.schemas.analytics import AnalyticsOverview, LinkAnalytics, ClickEvent, ExportRequest
+from app.services.subscription_service import SubscriptionService
 
 router = APIRouter()
 
 @router.get("/overview", response_model=AnalyticsOverview)
 async def get_analytics_overview(
     project: Project = Depends(get_project_by_id),
+    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
     days: int = Query(30, description="Nombre de jours à analyser")
 ):
+    # Vérifier l'accès aux analytics complètes
+    has_full_analytics = SubscriptionService.has_feature_access(
+        db, str(current_user.organization_id), "full_analytics"
+    )
+    
+    # Limiter les données pour le plan Starter
+    if not has_full_analytics and days > 7:
+        days = 7  # Limiter à 7 jours pour le plan Starter
+    
     date_from = datetime.utcnow() - timedelta(days=days)
     
     total_links = db.query(DynamicLink).filter(
