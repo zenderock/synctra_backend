@@ -56,14 +56,26 @@ class PlatformDetector:
         platform_info: Dict[str, str]
     ) -> str:
         platform = platform_info["platform"]
+        original_url = link_data["original_url"]
         
+        # Gestion Android
         if platform == "android" and link_data.get("android_package"):
-            if link_data.get("android_fallback_url"):
-                return link_data["android_fallback_url"]
+            package = link_data["android_package"]
+            # Créer un intent URL pour essayer d'ouvrir l'app
+            intent_url = f"intent://{original_url}#Intent;package={package};scheme=https;end"
+            return intent_url
+        
+        # Gestion iOS
         elif platform == "ios" and link_data.get("ios_bundle_id"):
+            bundle_id = link_data["ios_bundle_id"]
+            # Créer un universal link ou custom scheme
             if link_data.get("ios_fallback_url"):
                 return link_data["ios_fallback_url"]
+            # Fallback vers l'URL originale avec paramètre pour l'app
+            return f"{original_url}?utm_source=ios_app&bundle_id={bundle_id}"
+        
+        # Gestion Desktop
         elif platform in ["windows", "macos", "linux"] and link_data.get("desktop_fallback_url"):
             return link_data["desktop_fallback_url"]
         
-        return link_data["original_url"]
+        return original_url
