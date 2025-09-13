@@ -74,6 +74,26 @@ async def track_web_continue(
     
     return {"success": True}
 
+@router.post("/track-app-install")
+async def track_app_install(
+    request_data: TrackingRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Track quand l'utilisateur clique sur télécharger l'app
+    """
+    context = deferred_service.get_deferred_context(request_data.tracking_id)
+    if context:
+        click_id = context.get("click_id")
+        if click_id:
+            click = db.query(LinkClick).filter(LinkClick.id == click_id).first()
+            if click:
+                # Marquer comme tentative d'installation
+                click.converted = True  # Conversion vers l'app store
+                db.commit()
+    
+    return {"success": True}
+
 @router.get("/install-status/{tracking_id}")
 async def check_install_status(
     tracking_id: str,

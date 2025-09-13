@@ -209,7 +209,7 @@ class DeferredDeepLinkingService:
                 <div class="description">
                     {link.description or 'Pour une meilleure expérience, téléchargez notre application.'}
                 </div>
-                <a href="{install_url}" class="install-btn">
+                <a href="{install_url}" class="install-btn" onclick="trackAppInstall()">
                     {'Télécharger sur l\'App Store' if platform == 'ios' else 'Télécharger sur Google Play'}
                 </a>
                 <div class="continue-web">
@@ -223,22 +223,16 @@ class DeferredDeepLinkingService:
                 // Stocker le tracking ID dans le localStorage
                 localStorage.setItem('synctra_tracking_id', '{tracking_id}');
                 
-                // Essayer d'ouvrir l'app si elle est installée
-                setTimeout(function() {{
-                    var appScheme = '';
-                    if ('{platform}' === 'ios' && '{link.ios_bundle_id or ""}') {{
-                        appScheme = '{link.ios_bundle_id or ""}://';
-                    }} else if ('{platform}' === 'android' && '{link.android_package or ""}') {{
-                        appScheme = 'intent://{link.original_url}#Intent;package={link.android_package or ""};end';
-                    }}
-                    
-                    if (appScheme) {{
-                        window.location.href = appScheme;
-                    }}
-                }}, 1000);
-                
                 function trackWebContinue() {{
                     fetch('/api/v1/deferred/track-web-continue', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{tracking_id: '{tracking_id}'}})
+                    }});
+                }}
+                
+                function trackAppInstall() {{
+                    fetch('/api/v1/deferred/track-app-install', {{
                         method: 'POST',
                         headers: {{'Content-Type': 'application/json'}},
                         body: JSON.stringify({{tracking_id: '{tracking_id}'}})
