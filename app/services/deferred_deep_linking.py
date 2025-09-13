@@ -35,9 +35,8 @@ class DeferredDeepLinkingService:
             'in-app'
         ]
         
-        # Pour forcer le deferred deep linking, retourner False temporairement
-        # return any(pattern in user_agent for pattern in app_patterns)
-        return False
+        # Détection plus intelligente basée sur les patterns
+        return any(pattern in user_agent for pattern in app_patterns)
     
     def create_deferred_context(
         self, 
@@ -222,6 +221,56 @@ class DeferredDeepLinkingService:
             <script>
                 // Stocker le tracking ID dans le localStorage
                 localStorage.setItem('synctra_tracking_id', '{tracking_id}');
+                
+                var appOpened = false;
+                var startTime = Date.now();
+                
+                // Essayer d'ouvrir l'app automatiquement si elle est installée
+                function tryOpenApp() {{
+                    var appScheme = '';
+                    var fallbackUrl = '';
+                    
+                    if ('{platform}' === 'ios' && '{link.ios_bundle_id or ""}') {{
+                        // Pour iOS, utiliser un custom scheme ou universal link
+                        appScheme = '{link.ios_bundle_id or ""}://open?url=' + encodeURIComponent('{link.original_url}');
+                        fallbackUrl = '{link.ios_fallback_url or link.original_url}';
+                    }} else if ('{platform}' === 'android' && '{link.android_package or ""}') {{
+                        // Pour Android, utiliser intent URL
+                        appScheme = 'intent://{link.original_url}#Intent;package={link.android_package or ""};scheme=https;end';
+                        fallbackUrl = '{link.android_fallback_url or link.original_url}';
+                    }}
+                    
+                    if (appScheme) {{
+                        // Créer un iframe invisible pour tester l'ouverture
+                        var iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.src = appScheme;
+                        document.body.appendChild(iframe);
+                        
+                        // Détecter si l'app s'est ouverte
+                        setTimeout(function() {{
+                            if (!appOpened && (Date.now() - startTime) < 3000) {{
+                                // L'app ne s'est pas ouverte, on reste sur la page
+                                document.body.removeChild(iframe);
+                            }}
+                        }}, 2000);
+                        
+                        // Détecter si l'utilisateur revient (app fermée)
+                        window.addEventListener('focus', function() {{
+                            if (Date.now() - startTime > 1000) {{
+                                appOpened = true;
+                            }}
+                        }});
+                        
+                        // Détecter la perte de focus (app ouverte)
+                        window.addEventListener('blur', function() {{
+                            appOpened = true;
+                        }});
+                    }}
+                }}
+                
+                // Lancer la tentative d'ouverture après un délai
+                setTimeout(tryOpenApp, 500);
                 
                 function trackWebContinue() {{
                     fetch('/api/v1/deferred/track-web-continue', {{
