@@ -310,11 +310,20 @@
                     
                     if (deviceType === 'android' && config.androidPackage) {
                         addLog('🤖 Redirection Android directe...', 'info');
-                        const playStoreUrl = `https://play.google.com/store/apps/details?id=${config.androidPackage}`;
-                        addLog('🏪 Play Store URL: ' + playStoreUrl, 'info');
+                        
+                        // Utiliser le custom scheme configuré dans le projet
+                        const deeplink = config.customScheme ;
+                        addLog('🔗 Deeplink généré: ' + deeplink, 'info');
+                        
+                        // Essayer d'ouvrir l'app avec le scheme configuré
+                        window.location.href = deeplink;
+                        
+                        // Si l'app ne s'ouvre pas, rediriger vers le store après 2s
                         setTimeout(() => {
+                            const playStoreUrl = `https://play.google.com/store/apps/details?id=${config.androidPackage}`;
+                            addLog('🏪 Fallback Play Store: ' + playStoreUrl, 'warning');
                             window.location.href = playStoreUrl;
-                        }, 1000);
+                        }, 2000);
                     } else if (deviceType === 'ios' && config.iosAppId) {
                         addLog('🍎 Redirection iOS directe...', 'info');
                         const appStoreUrl = `https://apps.apple.com/app/id${config.iosAppId}`;
@@ -439,6 +448,9 @@
             android: config.androidPackage,
             ios: config.iosAppId
         }), 'info');
+        
+        // Le système utilise maintenant la configuration dynamique du projet
+        addLog('🔧 Utilisation du custom scheme configuré: ' + config.customScheme, 'info');
 
         setTimeout(() => {
             const fallbackBtn = document.getElementById('fallbackBtn');
