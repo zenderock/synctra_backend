@@ -12,6 +12,7 @@ from app.core.config import settings
 
 router = APIRouter()
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def get_deferred_link(
     packageName: str = Query(..., description="Nom du package"),
@@ -34,6 +35,7 @@ async def get_deferred_link(
         }
     )
 
+@router.post("", status_code=201, include_in_schema=False)
 @router.post("/", status_code=201)
 async def store_deferred_link(
     deferred_data: DeferredLinkCreate,
@@ -63,6 +65,7 @@ async def store_deferred_link(
     
     return SDKResponse(success=True)
 
+@router.delete("", status_code=204, include_in_schema=False)
 @router.delete("/", status_code=204)
 async def clean_deferred_link(
     packageName: str = Query(..., description="Nom du package"),

@@ -23,6 +23,7 @@ def generate_referral_code() -> str:
     """Générer un code de parrainage unique."""
     return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
 
+@router.post("", status_code=201, include_in_schema=False)
 @router.post("/", status_code=201)
 async def create_referral_code(
     referral_data: ReferralCodeCreate,
@@ -122,6 +123,7 @@ async def get_referral_code(
         )
     )
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def list_referral_codes(
     userId: str = Query(..., description="ID de l'utilisateur"),

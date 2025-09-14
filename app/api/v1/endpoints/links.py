@@ -17,6 +17,7 @@ from app.services.subscription_service import SubscriptionService
 
 router = APIRouter()
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def get_links(
     project: Project = Depends(get_project_by_id),
@@ -63,6 +64,7 @@ async def get_links(
         message="Liens récupérés avec succès"
     )
 
+@router.post("", include_in_schema=False)
 @router.post("/")
 async def create_link(
     link_data: DynamicLinkCreate,

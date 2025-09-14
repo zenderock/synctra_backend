@@ -20,6 +20,7 @@ from app.core.config import settings
 
 router = APIRouter()
 
+@router.post("", status_code=201, include_in_schema=False)
 @router.post("/", status_code=201)
 async def create_link(
     link_data: DeepLinkCreate,
@@ -126,6 +127,7 @@ async def get_link(
         )
     )
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def list_links(
     project: Project = Depends(get_api_key_auth),
