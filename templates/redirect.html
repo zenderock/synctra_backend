@@ -385,6 +385,14 @@
             addLog(message, type);
         };
 
+        // Ajouter un log de test au démarrage
+        addLog('🚀 Système de logs initialisé', 'info');
+        addLog('📱 Configuration: ' + JSON.stringify({
+            scheme: config.customScheme,
+            android: config.androidPackage,
+            ios: config.iosAppId
+        }), 'info');
+
         setTimeout(() => {
             const fallbackBtn = document.getElementById('fallbackBtn');
             if (fallbackBtn.style.display === 'none') {
