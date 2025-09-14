@@ -60,6 +60,122 @@ class AppRedirectHandler {
         return isInstalled;
     }
 
+    async handleAndroidRedirect(deeplink) {
+        // Méthode 1: Intent URLs (plus fiables pour Android)
+        if (this.config.androidPackage) {
+            const intentUrl = `intent://${deeplink.replace(this.config.customScheme, '')}#Intent;scheme=${this.config.customScheme.replace('://', '')};package=${this.config.androidPackage};S.browser_fallback_url=${encodeURIComponent(this.config.fallbackUrl)};end`;
+            
+            const intentSuccess = await this.tryIntentUrl(intentUrl);
+            if (intentSuccess) {
+                return true;
+            }
+        }
+
+        // Méthode 2: Custom scheme avec détection améliorée
+        return this.tryCustomSchemeAndroid(deeplink);
+    }
+
+    // Nouvelle méthode pour Intent URLs
+    tryIntentUrl(intentUrl) {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const startTime = Date.now();
+
+            const handleSuccess = () => {
+                if (!resolved && (Date.now() - startTime) < 1000) {
+                    resolved = true;
+                    resolve(true);
+                }
+            };
+
+            // Écouter les événements de changement de visibilité
+            document.addEventListener('visibilitychange', handleSuccess);
+            window.addEventListener('blur', handleSuccess);
+            window.addEventListener('pagehide', handleSuccess);
+
+            // Timeout plus court pour Intent URLs
+            setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    document.removeEventListener('visibilitychange', handleSuccess);
+                    window.removeEventListener('blur', handleSuccess);
+                    window.removeEventListener('pagehide', handleSuccess);
+                    resolve(false);
+                }
+            }, 1500);
+
+            // Tenter la redirection
+            try {
+                window.location.href = intentUrl;
+            } catch (error) {
+                if (!resolved) {
+                    resolved = true;
+                    resolve(false);
+                }
+            }
+        });
+    }
+
+    // Méthode améliorée pour Android custom scheme
+    tryCustomSchemeAndroid(deeplink) {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const startTime = Date.now();
+            let blurDetected = false;
+
+            const handleBlur = () => {
+                blurDetected = true;
+                setTimeout(() => {
+                    if (!resolved && blurDetected) {
+                        resolved = true;
+                        cleanup();
+                        resolve(true);
+                    }
+                }, 100);
+            };
+
+            const handleFocus = () => {
+                if (blurDetected && !resolved) {
+                    // L'utilisateur est revenu rapidement, l'app n'était pas installée
+                    resolved = true;
+                    cleanup();
+                    resolve(false);
+                }
+            };
+
+            const cleanup = () => {
+                window.removeEventListener('blur', handleBlur);
+                window.removeEventListener('focus', handleFocus);
+                document.removeEventListener('visibilitychange', handleBlur);
+            };
+
+            // Écouter les événements
+            window.addEventListener('blur', handleBlur);
+            window.addEventListener('focus', handleFocus);
+            document.addEventListener('visibilitychange', handleBlur);
+
+            // Timeout
+            setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    cleanup();
+                    resolve(false);
+                }
+            }, this.config.timeout);
+
+            // Créer un lien invisible et cliquer
+            const link = document.createElement('a');
+            link.href = deeplink;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            
+            setTimeout(() => {
+                link.click();
+                document.body.removeChild(link);
+            }, 100);
+        });
+    }
+
     async handleIOSRedirect(deeplink, linkData) {
         const isInstalled = await this.tryCustomScheme(deeplink);
         

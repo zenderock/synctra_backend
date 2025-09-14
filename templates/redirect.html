@@ -219,16 +219,42 @@
                 
                 statusEl.textContent = 'Tentative d\'ouverture de l\'application...';
                 
+                // Ajouter un délai pour voir si l'app s'ouvre
+                let appOpened = false;
+                
+                // Détecter si l'utilisateur quitte la page (app s'ouvre)
+                const handleVisibilityChange = () => {
+                    if (document.hidden) {
+                        appOpened = true;
+                        statusEl.textContent = 'Application ouverte avec succès !';
+                    }
+                };
+                
+                const handlePageHide = () => {
+                    appOpened = true;
+                };
+                
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+                window.addEventListener('pagehide', handlePageHide);
+                
                 const success = await handler.handleAppRedirect(deeplink, linkData);
                 
-                if (!success) {
-                    statusEl.textContent = 'Application non détectée. Redirection vers le store...';
+                // Attendre un peu pour voir si l'app s'est ouverte
+                setTimeout(() => {
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                    window.removeEventListener('pagehide', handlePageHide);
                     
-                    setTimeout(() => {
-                        fallbackBtn.style.display = 'inline-block';
-                        statusEl.textContent = 'Si la redirection ne fonctionne pas, cliquez ci-dessous :';
-                    }, 2000);
-                }
+                    if (!appOpened && !success) {
+                        statusEl.textContent = 'Application non détectée. Redirection vers le store...';
+                        
+                        setTimeout(() => {
+                            fallbackBtn.style.display = 'inline-block';
+                            statusEl.textContent = 'Si la redirection ne fonctionne pas, cliquez ci-dessous :';
+                        }, 1500);
+                    } else if (appOpened) {
+                        statusEl.textContent = 'Application ouverte avec succès !';
+                    }
+                }, 2000);
                 
             } catch (error) {
                 console.error('Erreur de redirection:', error);
