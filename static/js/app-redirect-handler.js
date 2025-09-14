@@ -1,16 +1,16 @@
 // Gestionnaire de redirection intelligente pour applications mobiles
 class AppRedirectHandler {
     constructor(config) {
-        this.config = {
-            customScheme: config.customScheme,
-            androidPackage: config.androidPackage,
-            iosAppId: config.iosAppId,
-            fallbackUrl: config.fallbackUrl,
-            timeout: config.timeout || 3000,
-            apiKey: config.apiKey,
-            projectId: config.projectId,
-            apiBaseUrl: config.apiBaseUrl || '/sdk/v1'
-        };
+        this.config = config;
+    }
+
+    addLog(message, type = 'info') {
+        // Utiliser la fonction addLog globale si elle existe
+        if (typeof window.addLog === 'function') {
+            window.addLog(message, type);
+        } else {
+            console.log(message);
+        }
     }
 
     getDeviceType() {
@@ -79,45 +79,53 @@ class AppRedirectHandler {
     }
 
     async handleAndroidRedirect(deeplink, linkData) {
-        console.log('🤖 Android redirect - deeplink:', deeplink);
-        console.log('🤖 Android package:', this.config.androidPackage);
+        this.addLog('🤖 Android redirect - deeplink: ' + deeplink, 'info');
+        this.addLog('🤖 Android package: ' + this.config.androidPackage, 'info');
+        this.addLog('🗺️ Route actuelle: ' + window.location.href, 'info');
+        this.addLog('📊 User Agent: ' + navigator.userAgent, 'info');
         
         // Méthode 1: Intent URLs (plus fiables pour Android)
         if (this.config.androidPackage) {
             const intentUrl = `intent://${deeplink.replace(this.config.customScheme, '')}#Intent;scheme=${this.config.customScheme.replace('://', '')};package=${this.config.androidPackage};S.browser_fallback_url=${encodeURIComponent(this.config.fallbackUrl)};end`;
-            console.log('🤖 Intent URL:', intentUrl);
+            this.addLog('🤖 Intent URL générée: ' + intentUrl, 'info');
+            this.addLog('⏰ Tentative d\'ouverture Intent à: ' + new Date().toISOString(), 'info');
             
             const intentSuccess = await this.tryIntentUrl(intentUrl);
+            this.addLog('📊 Résultat Intent URL: ' + intentSuccess, 'info');
+            
             if (intentSuccess) {
-                console.log('✅ Intent URL réussie - app ouverte');
+                this.addLog('✅ Intent URL réussie - app ouverte', 'success');
+                this.addLog('🎯 Succès à: ' + new Date().toISOString(), 'success');
                 return true;
             }
-            console.log('❌ Intent URL échouée - app non installée');
+            this.addLog('❌ Intent URL échouée - app probablement non installée', 'error');
+            this.addLog('⏰ Échec Intent à: ' + new Date().toISOString(), 'error');
         }
 
         // Méthode 2: Custom scheme avec détection améliorée
-        console.log('🔄 Essai custom scheme...');
+        this.addLog('🔄 Essai custom scheme...', 'warning');
+        this.addLog('⏰ Tentative custom scheme à: ' + new Date().toISOString(), 'info');
         const isInstalled = await this.tryCustomSchemeAndroid(deeplink);
+        this.addLog('📊 Résultat custom scheme: ' + isInstalled, 'info');
         
         if (!isInstalled) {
-            console.log('❌ App non installée - sauvegarde deferred link');
+            this.addLog('❌ App non installée - toutes les méthodes ont échoué', 'error');
+            this.addLog('⏰ Échec final à: ' + new Date().toISOString(), 'error');
+            this.addLog('💾 Sauvegarde deferred link...', 'info');
             await this.saveDeferredLink(linkData);
             
-            console.log('🏪 Redirection vers Play Store...');
+            this.addLog('🏪 Préparation redirection vers store...', 'warning');
             if (this.config.androidPackage) {
                 const playStoreUrl = `https://play.google.com/store/apps/details?id=${this.config.androidPackage}`;
-                console.log('🏪 Play Store URL:', playStoreUrl);
-                setTimeout(() => {
-                    window.location.href = playStoreUrl;
-                }, 500);
+                this.addLog('🏪 Play Store URL: ' + playStoreUrl, 'warning');
+                this.addLog('⏰ Redirection programmée dans 15s à: ' + new Date(Date.now() + 15000).toISOString(), 'warning');
             } else {
-                console.log('🌐 Fallback URL:', this.config.fallbackUrl);
-                setTimeout(() => {
-                    window.location.href = this.config.fallbackUrl;
-                }, 500);
+                this.addLog('🌐 Fallback URL: ' + this.config.fallbackUrl, 'warning');
+                this.addLog('⏰ Redirection fallback programmée dans 15s', 'warning');
             }
         } else {
-            console.log('✅ App installée et ouverte');
+            this.addLog('✅ App installée et ouverte avec succès', 'success');
+            this.addLog('🎯 Succès custom scheme à: ' + new Date().toISOString(), 'success');
         }
         
         return isInstalled;
@@ -225,26 +233,31 @@ class AppRedirectHandler {
     }
 
     async handleIOSRedirect(deeplink, linkData) {
-        console.log('🍎 iOS redirect - deeplink:', deeplink);
-        console.log('🍎 iOS app ID:', this.config.iosAppId);
+        this.addLog('🍎 iOS redirect - deeplink: ' + deeplink, 'info');
+        this.addLog('🍎 iOS app ID: ' + this.config.iosAppId, 'info');
+        this.addLog('🗺️ Route actuelle: ' + window.location.href, 'info');
+        this.addLog('📊 User Agent: ' + navigator.userAgent, 'info');
+        this.addLog('⏰ Tentative d\'ouverture iOS à: ' + new Date().toISOString(), 'info');
         
         const isInstalled = await this.tryCustomScheme(deeplink);
+        this.addLog('📊 Résultat custom scheme iOS: ' + isInstalled, 'info');
         
         if (!isInstalled) {
-            console.log('❌ App non installée - sauvegarde deferred link');
+            this.addLog('❌ App iOS non installée - échec de la tentative', 'error');
+            this.addLog('⏰ Échec iOS à: ' + new Date().toISOString(), 'error');
+            this.addLog('💾 Sauvegarde deferred link...', 'info');
             await this.saveDeferredLink(linkData);
             
-            console.log('🏪 Redirection vers App Store...');
+            this.addLog('🏪 Préparation redirection vers App Store...', 'warning');
             const appStoreUrl = this.config.iosAppId ? 
                 `https://apps.apple.com/app/id${this.config.iosAppId}` : 
                 this.config.fallbackUrl;
             
-            console.log('🏪 App Store URL:', appStoreUrl);
-            setTimeout(() => {
-                window.location.href = appStoreUrl;
-            }, 500);
+            this.addLog('🏪 App Store URL: ' + appStoreUrl, 'warning');
+            this.addLog('⏰ Redirection iOS programmée dans 15s à: ' + new Date(Date.now() + 15000).toISOString(), 'warning');
         } else {
-            console.log('✅ App installée et ouverte');
+            this.addLog('✅ App iOS installée et ouverte avec succès', 'success');
+            this.addLog('🎯 Succès iOS à: ' + new Date().toISOString(), 'success');
         }
         
         return isInstalled;

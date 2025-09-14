@@ -325,7 +325,7 @@
                             const fallbackUrl = config.androidFallbackUrl || config.fallbackUrl;
                             addLog('🏪 Fallback configuré: ' + fallbackUrl, 'warning');
                             window.location.href = fallbackUrl;
-                        }, 2000);
+                        }, 15000);
                     } else if (deviceType === 'ios' && config.iosAppId) {
                         addLog('🍎 Redirection iOS directe...', 'info');
                         
@@ -339,7 +339,7 @@
                             const fallbackUrl = config.iosFallbackUrl || config.fallbackUrl;
                             addLog('🏪 Fallback iOS configuré: ' + fallbackUrl, 'warning');
                             window.location.href = fallbackUrl;
-                        }, 2000);
+                        }, 15000);
                     } else {
                         addLog('💻 Redirection fallback URL...', 'info');
                         setTimeout(() => {
@@ -406,7 +406,7 @@
                         statusEl.textContent = 'Application ouverte avec succès !';
                         addLog('✅ Confirmation: Application ouverte', 'success');
                     }
-                }, 2000);
+                }, 15000);
                 
             } catch (error) {
                 console.error('Erreur de redirection:', error);
@@ -430,6 +430,9 @@
             logContent.appendChild(logEntry);
             logContent.scrollTop = logContent.scrollHeight;
         }
+
+        // Rendre addLog disponible globalement pour AppRedirectHandler
+        window.addLog = addLog;
 
         function clearLogs() {
             document.getElementById('logContent').innerHTML = '';
