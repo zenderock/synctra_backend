@@ -12,6 +12,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.api.v1.api import api_router
+from app.api.sdk.v1.api import api_router as sdk_api_router
 from app.api.v1.endpoints.redirect import router as redirect_router
 from app.core.exceptions import SynctraException
 
@@ -77,6 +78,7 @@ async def synctra_exception_handler(request: Request, exc: SynctraException):
 
 # Routes API d'abord
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(sdk_api_router, prefix="/sdk/v1")
 
 # Route de santé
 @app.get("/health")
