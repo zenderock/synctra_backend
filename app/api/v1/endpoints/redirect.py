@@ -88,7 +88,7 @@ async def redirect_link(
             "request": request,
             "custom_scheme": custom_scheme,
             "android_package": link.android_package or "",
-            "ios_app_id": link.ios_app_id or "",
+            "ios_app_id": project.ios_bundle_id or "",  # Utiliser ios_bundle_id du projet
             "fallback_url": fallback_url,
             "android_fallback_url": link.android_fallback_url or "",
             "ios_fallback_url": link.ios_fallback_url or "",
