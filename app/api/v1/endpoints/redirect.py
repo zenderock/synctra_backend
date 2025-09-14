@@ -74,6 +74,42 @@ async def redirect_link(
         
         # Générer l'URL de redirection basée sur la plateforme
         if user_agent.os.family == 'Android' and link.android_package:
+            # Sauvegarder les données pour deferred deep linking
+            from app.models.deferred_link import DeferredLink
+            from datetime import timedelta
+            import uuid
+            
+            device_id = f"web_{uuid.uuid4().hex[:12]}"
+            
+            # Supprimer les anciens deferred links pour éviter les doublons
+            db.query(DeferredLink).filter(
+                DeferredLink.package_name == link.android_package,
+                DeferredLink.platform == "android"
+            ).delete()
+            
+            # Créer le deferred link
+            deferred_link = DeferredLink(
+                device_id=device_id,
+                package_name=link.android_package,
+                platform="android",
+                link_id=str(link.id),
+                original_url=str(link.original_url),
+                parameters={
+                    "utm_source": link.utm_source,
+                    "utm_medium": link.utm_medium,
+                    "utm_campaign": link.utm_campaign,
+                    "utm_term": link.utm_term,
+                    "utm_content": link.utm_content
+                },
+                ip_address=client_ip,
+                user_agent=str(request.headers.get("user-agent", "")),
+                timestamp=datetime.utcnow(),
+                expires_at=datetime.utcnow() + timedelta(hours=24)
+            )
+            
+            db.add(deferred_link)
+            db.commit()
+            
             # Utiliser Intent URL pour Android (plus fiable)
             package_parts = link.android_package.split('.')
             app_name = package_parts[-1] if package_parts else "app"
@@ -85,6 +121,42 @@ async def redirect_link(
             return RedirectResponse(url=intent_url, status_code=302)
             
         elif user_agent.os.family == 'iOS' and link.ios_bundle_id:
+            # Sauvegarder les données pour deferred deep linking iOS
+            from app.models.deferred_link import DeferredLink
+            from datetime import timedelta
+            import uuid
+            
+            device_id = f"web_{uuid.uuid4().hex[:12]}"
+            
+            # Supprimer les anciens deferred links pour éviter les doublons
+            db.query(DeferredLink).filter(
+                DeferredLink.package_name == link.ios_bundle_id,
+                DeferredLink.platform == "ios"
+            ).delete()
+            
+            # Créer le deferred link
+            deferred_link = DeferredLink(
+                device_id=device_id,
+                package_name=link.ios_bundle_id,
+                platform="ios",
+                link_id=str(link.id),
+                original_url=str(link.original_url),
+                parameters={
+                    "utm_source": link.utm_source,
+                    "utm_medium": link.utm_medium,
+                    "utm_campaign": link.utm_campaign,
+                    "utm_term": link.utm_term,
+                    "utm_content": link.utm_content
+                },
+                ip_address=client_ip,
+                user_agent=str(request.headers.get("user-agent", "")),
+                timestamp=datetime.utcnow(),
+                expires_at=datetime.utcnow() + timedelta(hours=24)
+            )
+            
+            db.add(deferred_link)
+            db.commit()
+            
             # Pour iOS, essayer le custom scheme puis fallback
             bundle_parts = link.ios_bundle_id.split('.')
             app_name = bundle_parts[-1] if bundle_parts else "app"
