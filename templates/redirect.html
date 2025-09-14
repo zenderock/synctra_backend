@@ -268,6 +268,8 @@
             androidPackage: '{{ android_package }}',
             iosAppId: '{{ ios_app_id }}',
             fallbackUrl: '{{ fallback_url }}',
+            androidFallbackUrl: '{{ android_fallback_url }}',
+            iosFallbackUrl: '{{ ios_fallback_url }}',
             timeout: 3000,
             apiKey: '{{ api_key }}',
             projectId: '{{ project_id }}',
@@ -318,19 +320,26 @@
                         // Essayer d'ouvrir l'app avec le scheme configuré
                         window.location.href = deeplink;
                         
-                        // Si l'app ne s'ouvre pas, rediriger vers le store après 2s
+                        // Si l'app ne s'ouvre pas, utiliser l'URL de fallback configurée
                         setTimeout(() => {
-                            const playStoreUrl = `https://play.google.com/store/apps/details?id=${config.androidPackage}`;
-                            addLog('🏪 Fallback Play Store: ' + playStoreUrl, 'warning');
-                            window.location.href = playStoreUrl;
+                            const fallbackUrl = config.androidFallbackUrl || config.fallbackUrl;
+                            addLog('🏪 Fallback configuré: ' + fallbackUrl, 'warning');
+                            window.location.href = fallbackUrl;
                         }, 2000);
                     } else if (deviceType === 'ios' && config.iosAppId) {
                         addLog('🍎 Redirection iOS directe...', 'info');
-                        const appStoreUrl = `https://apps.apple.com/app/id${config.iosAppId}`;
-                        addLog('🏪 App Store URL: ' + appStoreUrl, 'info');
+                        
+                        // Utiliser le custom scheme configuré
+                        const deeplink = config.customScheme;
+                        addLog('🔗 Deeplink iOS: ' + deeplink, 'info');
+                        window.location.href = deeplink;
+                        
+                        // Fallback vers l'URL configurée
                         setTimeout(() => {
-                            window.location.href = appStoreUrl;
-                        }, 1000);
+                            const fallbackUrl = config.iosFallbackUrl || config.fallbackUrl;
+                            addLog('🏪 Fallback iOS configuré: ' + fallbackUrl, 'warning');
+                            window.location.href = fallbackUrl;
+                        }, 2000);
                     } else {
                         addLog('💻 Redirection fallback URL...', 'info');
                         setTimeout(() => {

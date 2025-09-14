@@ -90,6 +90,8 @@ async def redirect_link(
             "android_package": link.android_package or "",
             "ios_app_id": link.ios_app_id or "",
             "fallback_url": fallback_url,
+            "android_fallback_url": link.android_fallback_url or "",
+            "ios_fallback_url": link.ios_fallback_url or "",
             "original_url": str(link.original_url),
             "api_key": project.api_key,
             "project_id": project.id,
