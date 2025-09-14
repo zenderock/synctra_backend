@@ -16,6 +16,16 @@ class Project(BaseModel):
     status = Column(String(50), default='development')
     settings = Column(JSON, default={})
     
+    # Configuration pour App Links / Universal Links
+    android_package = Column(String(255))
+    ios_bundle_id = Column(String(255))
+    android_sha256_fingerprints = Column(JSON, default=[])
+    ios_team_id = Column(String(20))
+    
+    # Fichiers de vérification de domaine
+    assetlinks_json = Column(JSON)
+    apple_app_site_association = Column(JSON)
+    
     organization = relationship("Organization", back_populates="projects")
     dynamic_links = relationship("DynamicLink", back_populates="project")
     referral_codes = relationship("ReferralCode", back_populates="project")
