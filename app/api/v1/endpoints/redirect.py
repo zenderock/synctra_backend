@@ -68,164 +68,37 @@ async def redirect_link(
         browser=user_agent.browser.family
     )
     
-    # Si c'est un appareil mobile, gérer la redirection intelligente côté serveur
-    if user_agent.is_mobile:
+    # Si c'est un appareil mobile, utiliser le template avec JS amélioré
+    if user_agent.is_mobile and (link.android_package or link.ios_bundle_id):
         project = link.project
         
-        # Générer l'URL de redirection basée sur la plateforme
-        if user_agent.os.family == 'Android' and link.android_package:
-            # Sauvegarder les données pour deferred deep linking
-            from app.models.deferred_link import DeferredLink
-            from datetime import timedelta
-            import uuid
-            
-            device_id = f"web_{uuid.uuid4().hex[:12]}"
-            
-            # Supprimer les anciens deferred links pour éviter les doublons
-            db.query(DeferredLink).filter(
-                DeferredLink.package_name == link.android_package,
-                DeferredLink.platform == "android"
-            ).delete()
-            
-            # Créer le deferred link
-            deferred_link = DeferredLink(
-                device_id=device_id,
-                package_name=link.android_package,
-                platform="android",
-                link_id=str(link.id),
-                original_url=str(link.original_url),
-                parameters={
-                    "utm_source": link.utm_source,
-                    "utm_medium": link.utm_medium,
-                    "utm_campaign": link.utm_campaign,
-                    "utm_term": link.utm_term,
-                    "utm_content": link.utm_content
-                },
-                ip_address=client_ip,
-                user_agent=str(request.headers.get("user-agent", "")),
-                timestamp=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(hours=24)
-            )
-            
-            db.add(deferred_link)
-            db.commit()
-            
-            # Utiliser Intent URL pour Android (plus fiable)
-            package_parts = link.android_package.split('.')
-            app_name = package_parts[-1] if package_parts else "app"
-            
-            # Construire l'Intent URL avec fallback automatique
-            fallback_url = link.android_fallback_url or str(link.original_url)
-            intent_url = f"intent://open#Intent;scheme={app_name};package={link.android_package};S.browser_fallback_url={fallback_url};end"
-            
-            return RedirectResponse(url=intent_url, status_code=302)
-            
-        elif user_agent.os.family == 'iOS' and link.ios_bundle_id:
-            # Sauvegarder les données pour deferred deep linking iOS
-            from app.models.deferred_link import DeferredLink
-            from datetime import timedelta
-            import uuid
-            
-            device_id = f"web_{uuid.uuid4().hex[:12]}"
-            
-            # Supprimer les anciens deferred links pour éviter les doublons
-            db.query(DeferredLink).filter(
-                DeferredLink.package_name == link.ios_bundle_id,
-                DeferredLink.platform == "ios"
-            ).delete()
-            
-            # Créer le deferred link
-            deferred_link = DeferredLink(
-                device_id=device_id,
-                package_name=link.ios_bundle_id,
-                platform="ios",
-                link_id=str(link.id),
-                original_url=str(link.original_url),
-                parameters={
-                    "utm_source": link.utm_source,
-                    "utm_medium": link.utm_medium,
-                    "utm_campaign": link.utm_campaign,
-                    "utm_term": link.utm_term,
-                    "utm_content": link.utm_content
-                },
-                ip_address=client_ip,
-                user_agent=str(request.headers.get("user-agent", "")),
-                timestamp=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(hours=24)
-            )
-            
-            db.add(deferred_link)
-            db.commit()
-            
-            # Pour iOS, essayer le custom scheme puis fallback
-            bundle_parts = link.ios_bundle_id.split('.')
-            app_name = bundle_parts[-1] if bundle_parts else "app"
-            custom_scheme = f"{app_name}://open"
-            
-            # Créer une page de redirection simple pour iOS
-            fallback_url = link.ios_fallback_url or str(link.original_url)
-            
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Redirection...</title>
-                <style>
-                    body {{ 
-                        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                        background: #f5f5f7;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        min-height: 100vh;
-                        margin: 0;
-                        color: #1d1d1f;
-                    }}
-                    .container {{ 
-                        text-align: center;
-                        background: white;
-                        padding: 2rem;
-                        border-radius: 16px;
-                        border: 1px solid #d2d2d7;
-                    }}
-                    .btn {{ 
-                        background: #007aff;
-                        color: white;
-                        border: none;
-                        padding: 12px 24px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        margin: 8px;
-                        cursor: pointer;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2>Ouverture de l'application</h2>
-                    <p>Si l'application ne s'ouvre pas automatiquement :</p>
-                    <button class="btn" onclick="window.location.href='{fallback_url}'">Continuer sur le web</button>
-                </div>
-                <script>
-                    // Tentative d'ouverture immédiate
-                    window.location.href = '{custom_scheme}';
-                    
-                    // Fallback après 3 secondes
-                    setTimeout(() => {{
-                        window.location.href = '{fallback_url}';
-                    }}, 3000);
-                </script>
-            </body>
-            </html>
-            """
-            
-            return HTMLResponse(content=html_content)
+        # Préparer les données pour le template
+        package_parts = (link.android_package or link.ios_bundle_id or "").split('.')
+        app_name = package_parts[-1] if package_parts else "app"
+        custom_scheme = f"{app_name}://"
         
-        else:
-            # Mobile sans configuration app - redirection directe
-            return RedirectResponse(url=str(link.original_url), status_code=302)
+        fallback_url = (
+            link.android_fallback_url if user_agent.os.family == 'Android' 
+            else link.ios_fallback_url if user_agent.os.family == 'iOS'
+            else str(link.original_url)
+        ) or str(link.original_url)
+        
+        # Utiliser le template avec le JS amélioré
+        return templates.TemplateResponse("redirect.html", {
+            "request": request,
+            "custom_scheme": custom_scheme,
+            "android_package": link.android_package or "",
+            "ios_app_id": link.ios_app_id or "",
+            "fallback_url": fallback_url,
+            "original_url": str(link.original_url),
+            "api_key": project.api_key,
+            "project_id": project.id,
+            "link_id": str(link.id)
+        })
+    
+    elif user_agent.is_mobile:
+        # Mobile sans configuration app - redirection directe
+        return RedirectResponse(url=str(link.original_url), status_code=302)
     
     # Redirection directe pour les autres cas (desktop)
     return RedirectResponse(url=str(link.original_url), status_code=302)

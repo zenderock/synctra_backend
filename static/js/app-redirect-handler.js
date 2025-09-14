@@ -33,6 +33,29 @@ class AppRedirectHandler {
         const deviceType = this.getDeviceType();
         const fullDeeplink = this.config.customScheme + deeplink;
 
+        // Utiliser getInstalledRelatedApps si disponible (plus fiable)
+        if ('getInstalledRelatedApps' in navigator) {
+            try {
+                const apps = await navigator.getInstalledRelatedApps();
+                const isAppInstalled = apps.some(app => 
+                    (app.platform === 'play' && app.id === this.config.androidPackage) ||
+                    (app.platform === 'itunes' && app.id === this.config.iosAppId)
+                );
+                
+                if (isAppInstalled) {
+                    window.location.href = fullDeeplink;
+                    return true;
+                } else {
+                    await this.saveDeferredLink(linkData);
+                    this.redirectToStore(deviceType);
+                    return false;
+                }
+            } catch (error) {
+                console.log('getInstalledRelatedApps non supporté, utilisation méthode classique');
+            }
+        }
+
+        // Méthode classique pour les navigateurs non supportés
         if (deviceType === 'android') {
             return this.handleAndroidRedirect(fullDeeplink, linkData);
         } else if (deviceType === 'ios') {
@@ -40,6 +63,18 @@ class AppRedirectHandler {
         } else {
             window.location.href = this.config.fallbackUrl;
             return false;
+        }
+    }
+
+    redirectToStore(deviceType) {
+        if (deviceType === 'android' && this.config.androidPackage) {
+            const playStoreUrl = `https://play.google.com/store/apps/details?id=${this.config.androidPackage}`;
+            window.location.href = playStoreUrl;
+        } else if (deviceType === 'ios' && this.config.iosAppId) {
+            const appStoreUrl = `https://apps.apple.com/app/id${this.config.iosAppId}`;
+            window.location.href = appStoreUrl;
+        } else {
+            window.location.href = this.config.fallbackUrl;
         }
     }
 
