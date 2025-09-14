@@ -29,6 +29,18 @@ async def create_link(
 ):
     """Créer un nouveau lien dynamique."""
     
+    # Vérifier les limites de liens pour le projet
+    from app.services.subscription_service import SubscriptionService
+    if not SubscriptionService.check_links_limit(db, str(project.id)):
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "success": False,
+                "message": "Limite de liens atteinte pour ce projet selon votre plan actuel.",
+                "code": "LINKS_LIMIT_REACHED"
+            }
+        )
+    
     short_code = LinkGenerator.generate_unique_short_code(db)
     
     # Construire l'URL finale avec les paramètres
