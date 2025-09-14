@@ -73,13 +73,32 @@ async def redirect_link(
         # Récupérer les paramètres du projet pour la redirection intelligente
         project = link.project
         
+        # Générer le custom scheme basé sur les packages
+        custom_scheme = None
+        if link.android_package:
+            # Convertir com.example.myapp -> myapp://
+            package_parts = link.android_package.split('.')
+            if package_parts:
+                app_name = package_parts[-1]
+                custom_scheme = f"{app_name}://"
+        elif link.ios_bundle_id:
+            # Convertir com.example.myapp -> myapp://
+            bundle_parts = link.ios_bundle_id.split('.')
+            if bundle_parts:
+                app_name = bundle_parts[-1]
+                custom_scheme = f"{app_name}://"
+        
+        # Si aucun scheme détectable, redirection directe sans page intermédiaire
+        if not custom_scheme:
+            return RedirectResponse(url=str(link.original_url), status_code=302)
+        
         # Construire les paramètres pour la page de redirection
         template_context = {
             "request": request,
             "link": link,
-            "custom_scheme": project.custom_scheme or "myapp://",
-            "android_package": project.android_package_name,
-            "ios_app_id": project.ios_app_store_id,
+            "custom_scheme": custom_scheme,
+            "android_package": link.android_package,
+            "ios_app_id": link.ios_bundle_id,
             "fallback_url": str(link.original_url),
             "api_key": project.api_key,
             "project_id": str(project.id),
