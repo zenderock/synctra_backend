@@ -68,52 +68,92 @@ async def redirect_link(
         browser=user_agent.browser.family
     )
     
-    # Si c'est un appareil mobile et qu'on a des URLs de fallback
+    # Si c'est un appareil mobile, gérer la redirection intelligente côté serveur
     if user_agent.is_mobile:
-        # Récupérer les paramètres du projet pour la redirection intelligente
         project = link.project
         
-        # Générer le custom scheme basé sur les packages
-        custom_scheme = None
-        if link.android_package:
-            # Convertir com.example.myapp -> myapp://
+        # Générer l'URL de redirection basée sur la plateforme
+        if user_agent.os.family == 'Android' and link.android_package:
+            # Utiliser Intent URL pour Android (plus fiable)
             package_parts = link.android_package.split('.')
-            if package_parts:
-                app_name = package_parts[-1]
-                custom_scheme = f"{app_name}://"
-        elif link.ios_bundle_id:
-            # Convertir com.example.myapp -> myapp://
+            app_name = package_parts[-1] if package_parts else "app"
+            
+            # Construire l'Intent URL avec fallback automatique
+            fallback_url = link.android_fallback_url or str(link.original_url)
+            intent_url = f"intent://open#Intent;scheme={app_name};package={link.android_package};S.browser_fallback_url={fallback_url};end"
+            
+            return RedirectResponse(url=intent_url, status_code=302)
+            
+        elif user_agent.os.family == 'iOS' and link.ios_bundle_id:
+            # Pour iOS, essayer le custom scheme puis fallback
             bundle_parts = link.ios_bundle_id.split('.')
-            if bundle_parts:
-                app_name = bundle_parts[-1]
-                custom_scheme = f"{app_name}://"
+            app_name = bundle_parts[-1] if bundle_parts else "app"
+            custom_scheme = f"{app_name}://open"
+            
+            # Créer une page de redirection simple pour iOS
+            fallback_url = link.ios_fallback_url or str(link.original_url)
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Redirection...</title>
+                <style>
+                    body {{ 
+                        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                        background: #f5f5f7;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        margin: 0;
+                        color: #1d1d1f;
+                    }}
+                    .container {{ 
+                        text-align: center;
+                        background: white;
+                        padding: 2rem;
+                        border-radius: 16px;
+                        border: 1px solid #d2d2d7;
+                    }}
+                    .btn {{ 
+                        background: #007aff;
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        margin: 8px;
+                        cursor: pointer;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>Ouverture de l'application</h2>
+                    <p>Si l'application ne s'ouvre pas automatiquement :</p>
+                    <button class="btn" onclick="window.location.href='{fallback_url}'">Continuer sur le web</button>
+                </div>
+                <script>
+                    // Tentative d'ouverture immédiate
+                    window.location.href = '{custom_scheme}';
+                    
+                    // Fallback après 3 secondes
+                    setTimeout(() => {{
+                        window.location.href = '{fallback_url}';
+                    }}, 3000);
+                </script>
+            </body>
+            </html>
+            """
+            
+            return HTMLResponse(content=html_content)
         
-        # Si aucun scheme détectable, redirection directe sans page intermédiaire
-        if not custom_scheme:
-            return RedirectResponse(url=str(link.original_url), status_code=302)
-        
-        # Construire les paramètres pour la page de redirection
-        template_context = {
-            "request": request,
-            "link": link,
-            "custom_scheme": custom_scheme,
-            "android_package": link.android_package,
-            "ios_app_id": link.ios_bundle_id,
-            "fallback_url": str(link.original_url),
-            "api_key": project.api_key,
-            "project_id": str(project.id),
-            "original_url": str(link.original_url)
-        }
-        
-        if user_agent.os.family == 'iOS' and link.ios_fallback_url:
-            template_context["fallback_url"] = link.ios_fallback_url
-            return templates.TemplateResponse("redirect.html", template_context)
-        elif user_agent.os.family == 'Android' and link.android_fallback_url:
-            template_context["fallback_url"] = link.android_fallback_url
-            return templates.TemplateResponse("redirect.html", template_context)
         else:
-            # Mobile sans configuration spécifique - utiliser la redirection intelligente
-            return templates.TemplateResponse("redirect.html", template_context)
+            # Mobile sans configuration app - redirection directe
+            return RedirectResponse(url=str(link.original_url), status_code=302)
     
     # Redirection directe pour les autres cas (desktop)
     return RedirectResponse(url=str(link.original_url), status_code=302)
