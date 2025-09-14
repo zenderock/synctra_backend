@@ -35,7 +35,7 @@
         .logo {
             width: 64px;
             height: 64px;
-            background-color: #007aff;
+            background-color: #ffffff;
             border-radius: 16px;
             margin: 0 auto 1.5rem;
             display: flex;
@@ -128,6 +128,64 @@
             }
         }
 
+        .debug-logs {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .debug-logs h3 {
+            margin: 0 0 1rem 0;
+            font-size: 0.875rem;
+            color: #495057;
+            text-align: center;
+        }
+
+        .log-content {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #212529;
+            background-color: #ffffff;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            min-height: 100px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .clear-logs-btn {
+            margin-top: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .clear-logs-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .log-entry {
+            margin-bottom: 0.25rem;
+            padding: 0.125rem 0;
+        }
+
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-info { color: #007bff; }
+        .log-warning { color: #ffc107; }
+
         @media (prefers-color-scheme: dark) {
             body {
                 background-color: #000000;
@@ -145,6 +203,29 @@
 
             .message {
                 color: #a1a1a6;
+            }
+
+            .debug-logs {
+                background-color: #2d2d2d;
+                border-color: #424245;
+            }
+
+            .debug-logs h3 {
+                color: #a1a1a6;
+            }
+
+            .log-content {
+                background-color: #1a1a1a;
+                border-color: #424245;
+                color: #f5f5f7;
+            }
+
+            .clear-logs-btn {
+                background-color: #424245;
+            }
+
+            .clear-logs-btn:hover {
+                background-color: #515154;
             }
         }
     </style>
@@ -167,6 +248,13 @@
         <button class="fallback-btn" id="fallbackBtn" onclick="handleFallback()">
             Télécharger l'application
         </button>
+        
+        <!-- Zone de debug logs -->
+        <div class="debug-logs" id="debugLogs">
+            <h3>🔧 Logs de debug</h3>
+            <div class="log-content" id="logContent"></div>
+            <button class="clear-logs-btn" onclick="clearLogs()">Effacer les logs</button>
+        </div>
     </div>
 
     <script src="/static/js/app-redirect-handler.js"></script>
@@ -266,6 +354,36 @@
         function handleFallback() {
             window.location.href = config.fallbackUrl;
         }
+
+        // Système de logs de debug
+        function addLog(message, type = 'info') {
+            const logContent = document.getElementById('logContent');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContent.appendChild(logEntry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logContent').innerHTML = '';
+        }
+
+        // Override console.log pour capturer les logs
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            const message = args.join(' ');
+            
+            let type = 'info';
+            if (message.includes('✅')) type = 'success';
+            else if (message.includes('❌')) type = 'error';
+            else if (message.includes('🔄')) type = 'warning';
+            else if (message.includes('🏪')) type = 'info';
+            
+            addLog(message, type);
+        };
 
         setTimeout(() => {
             const fallbackBtn = document.getElementById('fallbackBtn');
