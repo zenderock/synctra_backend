@@ -297,6 +297,40 @@
                 statusEl.textContent = 'Détection de l\'appareil...';
                 addLog('📱 Détection de l\'appareil...', 'info');
                 
+                // Vérifier que AppRedirectHandler est chargé
+                if (typeof AppRedirectHandler === 'undefined') {
+                    addLog('❌ AppRedirectHandler non chargé - tentative de fallback', 'error');
+                    // Fallback simple sans la classe
+                    const userAgent = navigator.userAgent.toLowerCase();
+                    let deviceType = 'desktop';
+                    if (/android/.test(userAgent)) deviceType = 'android';
+                    else if (/iphone|ipad|ipod/.test(userAgent)) deviceType = 'ios';
+                    
+                    addLog('📱 Type d\'appareil (fallback): ' + deviceType, 'info');
+                    
+                    if (deviceType === 'android' && config.androidPackage) {
+                        addLog('🤖 Redirection Android directe...', 'info');
+                        const playStoreUrl = `https://play.google.com/store/apps/details?id=${config.androidPackage}`;
+                        addLog('🏪 Play Store URL: ' + playStoreUrl, 'info');
+                        setTimeout(() => {
+                            window.location.href = playStoreUrl;
+                        }, 1000);
+                    } else if (deviceType === 'ios' && config.iosAppId) {
+                        addLog('🍎 Redirection iOS directe...', 'info');
+                        const appStoreUrl = `https://apps.apple.com/app/id${config.iosAppId}`;
+                        addLog('🏪 App Store URL: ' + appStoreUrl, 'info');
+                        setTimeout(() => {
+                            window.location.href = appStoreUrl;
+                        }, 1000);
+                    } else {
+                        addLog('💻 Redirection fallback URL...', 'info');
+                        setTimeout(() => {
+                            window.location.href = config.fallbackUrl;
+                        }, 1000);
+                    }
+                    return;
+                }
+                
                 const handler = new AppRedirectHandler(config);
                 const deviceType = handler.getDeviceType();
                 addLog('📱 Type d\'appareil détecté: ' + deviceType, 'info');
