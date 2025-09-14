@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, Response
 from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
-import ipaddress
+import user_agents
 
-from app.core.database import get_db, get_redis
+from app.core.database import get_db
 from app.models.dynamic_link import DynamicLink
-from app.models.link_click import LinkClick
-from app.services.platform_detector import PlatformDetector
-from app.services.deferred_deep_linking import deferred_service
-from app.core.exceptions import NotFoundException
+from app.services.analytics_service import AnalyticsService
 
 router = APIRouter()
+templates = Jinja2Templates(directory="templates")
 
 def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
@@ -31,100 +30,71 @@ async def redirect_link(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    """Rediriger vers l'URL cible ou afficher la page de redirection intelligente."""
+    
     # Éviter les requêtes pour les fichiers système
     if short_code in ["favicon.ico", "robots.txt", "sitemap.xml", "docs", "redoc", "openapi.json"]:
-        raise NotFoundException("Ressource non trouvée")
+        raise HTTPException(status_code=404, detail="Ressource non trouvée")
     
-    redis_client = get_redis()
+    # Récupérer le lien
+    link = db.query(DynamicLink).filter(
+        DynamicLink.short_code == short_code,
+        DynamicLink.is_active == True
+    ).first()
     
-    cache_key = f"link:{short_code}"
-    cached_link = None
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien non trouvé")
     
-    if redis_client:
-        try:
-            cached_link = redis_client.get(cache_key)
-        except:
-            cached_link = None
+    # Vérifier l'expiration
+    if link.expires_at and link.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="Lien expiré")
     
-    if cached_link:
-        import json
-        link_data = json.loads(cached_link)
-    else:
-        link = db.query(DynamicLink).filter(
-            DynamicLink.short_code == short_code,
-            DynamicLink.is_active == True
-        ).first()
-        
-        if not link:
-            raise NotFoundException("Lien non trouvé")
-        
-        if link.expires_at and link.expires_at < datetime.utcnow():
-            raise NotFoundException("Lien expiré")
-        
-        link_data = {
-            "id": str(link.id),
-            "original_url": link.original_url,
-            "android_package": link.android_package,
-            "android_fallback_url": link.android_fallback_url,
-            "ios_bundle_id": link.ios_bundle_id,
-            "ios_fallback_url": link.ios_fallback_url,
-            "desktop_fallback_url": link.desktop_fallback_url
-        }
-        
-        if redis_client:
-            try:
-                import json
-                redis_client.setex(cache_key, 3600, json.dumps(link_data))
-            except:
-                pass
+    # Analyser l'user agent
+    user_agent = user_agents.parse(str(request.headers.get("user-agent", "")))
     
-    user_agent = request.headers.get("User-Agent", "")
-    platform_info = PlatformDetector.detect_platform(user_agent)
-    
+    # Enregistrer l'analytics
     client_ip = get_client_ip(request)
     geo_info = get_geolocation_from_ip(client_ip)
     
-    click = LinkClick(
-        link_id=link_data["id"],
+    await AnalyticsService.record_click(
+        db=db,
+        link_id=link.id,
         ip_address=client_ip,
-        user_agent=user_agent,
-        referer=request.headers.get("Referer"),
+        user_agent=str(request.headers.get("user-agent", "")),
+        referer=request.headers.get("referer"),
         country=geo_info["country"],
-        region=geo_info["region"],
-        city=geo_info["city"],
-        platform=platform_info["platform"],
-        device_type=platform_info["device_type"],
-        browser=platform_info["browser"],
-        os=platform_info["os"]
+        device_type=user_agent.device.family,
+        os=user_agent.os.family,
+        browser=user_agent.browser.family
     )
     
-    db.add(click)
-    db.commit()
-    db.refresh(click)
-    
-    # Récupérer le lien complet pour le deferred deep linking
-    full_link = db.query(DynamicLink).filter(DynamicLink.id == link_data["id"]).first()
-    
-    # Vérifier si l'app est installée
-    platform = platform_info["platform"]
-    is_mobile = platform in ["android", "ios"]
-    
-    if is_mobile:
-        package_name = link_data.get("android_package") if platform == "android" else None
-        bundle_id = link_data.get("ios_bundle_id") if platform == "ios" else None
+    # Si c'est un appareil mobile et qu'on a des URLs de fallback
+    if user_agent.is_mobile:
+        # Récupérer les paramètres du projet pour la redirection intelligente
+        project = link.project
         
-        app_installed = deferred_service.is_app_installed(user_agent, package_name, bundle_id)
+        # Construire les paramètres pour la page de redirection
+        template_context = {
+            "request": request,
+            "link": link,
+            "custom_scheme": project.custom_scheme or "myapp://",
+            "android_package": project.android_package_name,
+            "ios_app_id": project.ios_app_store_id,
+            "fallback_url": str(link.original_url),
+            "api_key": project.api_key,
+            "project_id": str(project.id),
+            "original_url": str(link.original_url)
+        }
         
-        if not app_installed and (package_name or bundle_id):
-            # Créer un contexte de deferred deep linking
-            tracking_id = deferred_service.create_deferred_context(full_link, click)
-            
-            # Retourner une page intermédiaire
-            html_content = deferred_service.create_deferred_link_page(
-                full_link, tracking_id, platform
-            )
-            return HTMLResponse(content=html_content)
+        if user_agent.os.family == 'iOS' and link.ios_fallback_url:
+            template_context["fallback_url"] = link.ios_fallback_url
+            return templates.TemplateResponse("redirect.html", template_context)
+        elif user_agent.os.family == 'Android' and link.android_fallback_url:
+            template_context["fallback_url"] = link.android_fallback_url
+            return templates.TemplateResponse("redirect.html", template_context)
+        else:
+            # Mobile sans configuration spécifique - utiliser la redirection intelligente
+            return templates.TemplateResponse("redirect.html", template_context)
     
-    # Redirection normale si l'app est installée ou pas de mobile
-    redirect_url = PlatformDetector.get_redirect_url(link_data, platform_info)
-    return RedirectResponse(url=redirect_url, status_code=302)
+    # Redirection directe pour les autres cas (desktop)
+    return RedirectResponse(url=str(link.original_url), status_code=302)

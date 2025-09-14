@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirection en cours...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background-color: #f5f5f7;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1d1d1f;
+            line-height: 1.47059;
+            font-weight: 400;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 400px;
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1px solid #d2d2d7;
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            background-color: #007aff;
+            border-radius: 16px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+        }
+
+        h1 {
+            font-size: 1.375rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.022em;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin: 2rem 0;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background-color: #007aff;
+            border-radius: 50%;
+            animation: loading 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes loading {
+            0%, 80%, 100% { 
+                transform: scale(0.6);
+                opacity: 0.3;
+            } 
+            40% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .message {
+            font-size: 0.875rem;
+            color: #86868b;
+            line-height: 1.42857;
+            margin-bottom: 1.5rem;
+        }
+
+        .fallback-btn {
+            display: none;
+            background-color: #007aff;
+            border: none;
+            color: #ffffff;
+            padding: 11px 22px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 1.5rem;
+            transition: background-color 0.15s ease-in-out;
+            min-height: 44px;
+        }
+
+        .fallback-btn:hover {
+            background-color: #0051d5;
+        }
+
+        .fallback-btn:active {
+            background-color: #004fcf;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+                margin: 1rem;
+                border-radius: 16px;
+            }
+            
+            h1 {
+                font-size: 1.25rem;
+            }
+
+            .fallback-btn {
+                width: 100%;
+                min-height: 50px;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #000000;
+                color: #f5f5f7;
+            }
+
+            .container {
+                background-color: #1d1d1f;
+                border-color: #424245;
+            }
+
+            h1 {
+                color: #f5f5f7;
+            }
+
+            .message {
+                color: #a1a1a6;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📱</div>
+        <h1>Ouverture de l'application...</h1>
+        
+        <div class="loading">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        
+        <p class="message" id="status">
+            Tentative d'ouverture de l'application mobile...
+        </p>
+        
+        <button class="fallback-btn" id="fallbackBtn" onclick="handleFallback()">
+            Télécharger l'application
+        </button>
+    </div>
+
+    <script src="/static/js/app-redirect-handler.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const linkId = urlParams.get('id');
+        const deeplink = urlParams.get('dl') || '';
+        
+        const config = {
+            customScheme: '{{ custom_scheme }}',
+            androidPackage: '{{ android_package }}',
+            iosAppId: '{{ ios_app_id }}',
+            fallbackUrl: '{{ fallback_url }}',
+            timeout: 3000,
+            apiKey: '{{ api_key }}',
+            projectId: '{{ project_id }}',
+            apiBaseUrl: '/sdk/v1'
+        };
+
+        const linkData = {
+            linkId: linkId,
+            deeplink: deeplink,
+            originalUrl: '{{ original_url }}',
+            parameters: {
+                utm_source: urlParams.get('utm_source'),
+                utm_medium: urlParams.get('utm_medium'),
+                utm_campaign: urlParams.get('utm_campaign'),
+                utm_content: urlParams.get('utm_content'),
+                utm_term: urlParams.get('utm_term')
+            }
+        };
+
+        async function initRedirect() {
+            const statusEl = document.getElementById('status');
+            const fallbackBtn = document.getElementById('fallbackBtn');
+            
+            try {
+                statusEl.textContent = 'Détection de l\'appareil...';
+                
+                const handler = new AppRedirectHandler(config);
+                const deviceType = handler.getDeviceType();
+                
+                if (deviceType === 'desktop') {
+                    statusEl.textContent = 'Redirection vers la version web...';
+                    setTimeout(() => {
+                        window.location.href = config.fallbackUrl;
+                    }, 1000);
+                    return;
+                }
+                
+                statusEl.textContent = 'Tentative d\'ouverture de l\'application...';
+                
+                const success = await handler.handleAppRedirect(deeplink, linkData);
+                
+                if (!success) {
+                    statusEl.textContent = 'Application non détectée. Redirection vers le store...';
+                    
+                    setTimeout(() => {
+                        fallbackBtn.style.display = 'inline-block';
+                        statusEl.textContent = 'Si la redirection ne fonctionne pas, cliquez ci-dessous :';
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                console.error('Erreur de redirection:', error);
+                statusEl.textContent = 'Erreur lors de la redirection...';
+                fallbackBtn.style.display = 'inline-block';
+            }
+        }
+
+        function handleFallback() {
+            window.location.href = config.fallbackUrl;
+        }
+
+        setTimeout(() => {
+            const fallbackBtn = document.getElementById('fallbackBtn');
+            if (fallbackBtn.style.display === 'none') {
+                fallbackBtn.style.display = 'inline-block';
+                document.getElementById('status').textContent = 'Problème de redirection ? Cliquez ci-dessous :';
+            }
+        }, 5000);
+
+        window.addEventListener('load', initRedirect);
+
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                document.getElementById('status').textContent = 'Retour détecté. Vérification des données...';
+                
+                const handler = new AppRedirectHandler(config);
+                const deferred = handler.getLocalDeferred();
+                
+                if (deferred) {
+                    console.log('Données différées trouvées:', deferred);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
