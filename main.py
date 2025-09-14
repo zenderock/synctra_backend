@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 import time
 import uvicorn
@@ -75,6 +76,9 @@ async def synctra_exception_handler(request: Request, exc: SynctraException):
         status_code=exc.status_code,
         content={"error": exc.error_code, "message": exc.message, "details": exc.details}
     )
+
+# Servir les fichiers statiques
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Routes API d'abord
 app.include_router(api_router, prefix="/api/v1")
