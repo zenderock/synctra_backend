@@ -25,6 +25,7 @@ def generate_project_id(name: str) -> str:
     base_id = ''.join(c for c in base_id if c.isalnum() or c == '_')
     return f"{base_id[:20]}_2024"
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def get_projects(
     db: Session = Depends(get_db),
@@ -53,6 +54,7 @@ async def get_projects(
         message="Projets récupérés avec succès"
     )
 
+@router.post("", include_in_schema=False)
 @router.post("/")
 async def create_project(
     project_data: ProjectCreate,
