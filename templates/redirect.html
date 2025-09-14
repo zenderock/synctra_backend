@@ -291,14 +291,19 @@
             const statusEl = document.getElementById('status');
             const fallbackBtn = document.getElementById('fallbackBtn');
             
+            addLog('🔄 Début de la redirection...', 'info');
+            
             try {
                 statusEl.textContent = 'Détection de l\'appareil...';
+                addLog('📱 Détection de l\'appareil...', 'info');
                 
                 const handler = new AppRedirectHandler(config);
                 const deviceType = handler.getDeviceType();
+                addLog('📱 Type d\'appareil détecté: ' + deviceType, 'info');
                 
                 if (deviceType === 'desktop') {
                     statusEl.textContent = 'Redirection vers la version web...';
+                    addLog('💻 Desktop détecté - redirection web', 'info');
                     setTimeout(() => {
                         window.location.href = config.fallbackUrl;
                     }, 1000);
@@ -306,6 +311,7 @@
                 }
                 
                 statusEl.textContent = 'Tentative d\'ouverture de l\'application...';
+                addLog('🚀 Tentative d\'ouverture de l\'application...', 'info');
                 
                 // Ajouter un délai pour voir si l'app s'ouvre
                 let appOpened = false;
@@ -315,17 +321,21 @@
                     if (document.hidden) {
                         appOpened = true;
                         statusEl.textContent = 'Application ouverte avec succès !';
+                        addLog('✅ Application ouverte avec succès !', 'success');
                     }
                 };
                 
                 const handlePageHide = () => {
                     appOpened = true;
+                    addLog('✅ Page cachée - app probablement ouverte', 'success');
                 };
                 
                 document.addEventListener('visibilitychange', handleVisibilityChange);
                 window.addEventListener('pagehide', handlePageHide);
                 
+                addLog('🔄 Appel de handleAppRedirect...', 'info');
                 const success = await handler.handleAppRedirect(deeplink, linkData);
+                addLog('📊 Résultat handleAppRedirect: ' + success, 'info');
                 
                 // Attendre un peu pour voir si l'app s'est ouverte
                 setTimeout(() => {
@@ -334,6 +344,7 @@
                     
                     if (!appOpened && !success) {
                         statusEl.textContent = 'Application non détectée. Redirection vers le store...';
+                        addLog('❌ App non détectée - affichage bouton fallback', 'error');
                         
                         setTimeout(() => {
                             fallbackBtn.style.display = 'inline-block';
@@ -341,11 +352,13 @@
                         }, 1500);
                     } else if (appOpened) {
                         statusEl.textContent = 'Application ouverte avec succès !';
+                        addLog('✅ Confirmation: Application ouverte', 'success');
                     }
                 }, 2000);
                 
             } catch (error) {
                 console.error('Erreur de redirection:', error);
+                addLog('❌ ERREUR: ' + error.message, 'error');
                 statusEl.textContent = 'Erreur lors de la redirection...';
                 fallbackBtn.style.display = 'inline-block';
             }
