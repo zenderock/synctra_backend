@@ -45,6 +45,12 @@ async def get_projects(
             "status": project.status,
             "is_active": project.is_active,
             "settings": project.settings or {},
+            "android_package": project.android_package,
+            "ios_bundle_id": project.ios_bundle_id,
+            "android_sha256_fingerprints": project.android_sha256_fingerprints or [],
+            "ios_team_id": project.ios_team_id,
+            "assetlinks_json": project.assetlinks_json,
+            "apple_app_site_association": project.apple_app_site_association,
             "created_at": project.created_at.isoformat() if project.created_at else None,
             "updated_at": project.updated_at.isoformat() if project.updated_at else None
         })
@@ -85,7 +91,13 @@ async def create_project(
         organization_id=current_organization.id,
         api_key=api_key,
         custom_domain=project_data.custom_domain,
-        settings=project_data.settings or {}
+        settings=project_data.settings or {},
+        android_package=project_data.android_package,
+        ios_bundle_id=project_data.ios_bundle_id,
+        android_sha256_fingerprints=project_data.android_sha256_fingerprints or [],
+        ios_team_id=project_data.ios_team_id,
+        assetlinks_json=project_data.assetlinks_json,
+        apple_app_site_association=project_data.apple_app_site_association
     )
     
     db.add(project)
@@ -122,6 +134,12 @@ async def get_project(
             "status": project.status,
             "is_active": project.is_active,
             "settings": project.settings or {},
+            "android_package": project.android_package,
+            "ios_bundle_id": project.ios_bundle_id,
+            "android_sha256_fingerprints": project.android_sha256_fingerprints or [],
+            "ios_team_id": project.ios_team_id,
+            "assetlinks_json": project.assetlinks_json,
+            "apple_app_site_association": project.apple_app_site_association,
             "created_at": project.created_at.isoformat() if project.created_at else None,
             "updated_at": project.updated_at.isoformat() if project.updated_at else None
         },
@@ -152,6 +170,12 @@ async def update_project(
             "status": project.status,
             "is_active": project.is_active,
             "settings": project.settings or {},
+            "android_package": project.android_package,
+            "ios_bundle_id": project.ios_bundle_id,
+            "android_sha256_fingerprints": project.android_sha256_fingerprints or [],
+            "ios_team_id": project.ios_team_id,
+            "assetlinks_json": project.assetlinks_json,
+            "apple_app_site_association": project.apple_app_site_association,
             "created_at": project.created_at.isoformat() if project.created_at else None,
             "updated_at": project.updated_at.isoformat() if project.updated_at else None
         },

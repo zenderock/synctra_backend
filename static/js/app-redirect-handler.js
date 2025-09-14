@@ -79,35 +79,48 @@ class AppRedirectHandler {
     }
 
     async handleAndroidRedirect(deeplink, linkData) {
-        const isInstalled = await this.tryCustomScheme(deeplink);
+        console.log('🤖 Android redirect - deeplink:', deeplink);
+        console.log('🤖 Android package:', this.config.androidPackage);
         
-        if (!isInstalled) {
-            await this.saveDeferredLink(linkData);
-            
-            if (this.config.androidPackage) {
-                const playStoreUrl = `https://play.google.com/store/apps/details?id=${this.config.androidPackage}`;
-                window.location.href = playStoreUrl;
-            } else {
-                window.location.href = this.config.fallbackUrl;
-            }
-        }
-        
-        return isInstalled;
-    }
-
-    async handleAndroidRedirect(deeplink) {
         // Méthode 1: Intent URLs (plus fiables pour Android)
         if (this.config.androidPackage) {
             const intentUrl = `intent://${deeplink.replace(this.config.customScheme, '')}#Intent;scheme=${this.config.customScheme.replace('://', '')};package=${this.config.androidPackage};S.browser_fallback_url=${encodeURIComponent(this.config.fallbackUrl)};end`;
+            console.log('🤖 Intent URL:', intentUrl);
             
             const intentSuccess = await this.tryIntentUrl(intentUrl);
             if (intentSuccess) {
+                console.log('✅ Intent URL réussie - app ouverte');
                 return true;
             }
+            console.log('❌ Intent URL échouée - app non installée');
         }
 
         // Méthode 2: Custom scheme avec détection améliorée
-        return this.tryCustomSchemeAndroid(deeplink);
+        console.log('🔄 Essai custom scheme...');
+        const isInstalled = await this.tryCustomSchemeAndroid(deeplink);
+        
+        if (!isInstalled) {
+            console.log('❌ App non installée - sauvegarde deferred link');
+            await this.saveDeferredLink(linkData);
+            
+            console.log('🏪 Redirection vers Play Store...');
+            if (this.config.androidPackage) {
+                const playStoreUrl = `https://play.google.com/store/apps/details?id=${this.config.androidPackage}`;
+                console.log('🏪 Play Store URL:', playStoreUrl);
+                setTimeout(() => {
+                    window.location.href = playStoreUrl;
+                }, 500);
+            } else {
+                console.log('🌐 Fallback URL:', this.config.fallbackUrl);
+                setTimeout(() => {
+                    window.location.href = this.config.fallbackUrl;
+                }, 500);
+            }
+        } else {
+            console.log('✅ App installée et ouverte');
+        }
+        
+        return isInstalled;
     }
 
     // Nouvelle méthode pour Intent URLs
@@ -212,18 +225,26 @@ class AppRedirectHandler {
     }
 
     async handleIOSRedirect(deeplink, linkData) {
+        console.log('🍎 iOS redirect - deeplink:', deeplink);
+        console.log('🍎 iOS app ID:', this.config.iosAppId);
+        
         const isInstalled = await this.tryCustomScheme(deeplink);
         
         if (!isInstalled) {
+            console.log('❌ App non installée - sauvegarde deferred link');
             await this.saveDeferredLink(linkData);
             
+            console.log('🏪 Redirection vers App Store...');
             const appStoreUrl = this.config.iosAppId ? 
                 `https://apps.apple.com/app/id${this.config.iosAppId}` : 
                 this.config.fallbackUrl;
             
+            console.log('🏪 App Store URL:', appStoreUrl);
             setTimeout(() => {
                 window.location.href = appStoreUrl;
-            }, 100);
+            }, 500);
+        } else {
+            console.log('✅ App installée et ouverte');
         }
         
         return isInstalled;
