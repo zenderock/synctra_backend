@@ -260,6 +260,52 @@ async def update_link(
         message="Lien mis à jour avec succès"
     )
 
+@router.get("/redirect/{short_code}")
+async def get_link_by_short_code(
+    short_code: str,
+    db: Session = Depends(get_db)
+):
+    link = db.query(DynamicLink).filter(
+        DynamicLink.short_code == short_code,
+        DynamicLink.is_active == True
+    ).first()
+    
+    if not link:
+        return ApiResponse.error(
+            message="Lien non trouvé",
+            status_code=404
+        )
+    
+    # Récupérer les informations du projet
+    project = link.project
+    
+    return ApiResponse.success(
+        data={
+            "id": str(link.id),
+            "short_code": link.short_code,
+            "original_url": link.original_url,
+            "title": link.title,
+            "description": link.description,
+            "project_name": project.name if project else None,
+            "android_package": link.android_package,
+            "android_fallback_url": link.android_fallback_url,
+            "ios_app_id": project.ios_app_id if project else None,
+            "ios_bundle_id": link.ios_bundle_id,
+            "ios_fallback_url": link.ios_fallback_url,
+            "custom_scheme": project.custom_scheme if project else None,
+            "fallback_url": link.desktop_fallback_url or project.fallback_url if project else None,
+            "utm_source": link.utm_source,
+            "utm_medium": link.utm_medium,
+            "utm_campaign": link.utm_campaign,
+            "utm_term": link.utm_term,
+            "utm_content": link.utm_content,
+            "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+            "is_active": link.is_active,
+            "created_at": link.created_at.isoformat() if link.created_at else None
+        },
+        message="Lien récupéré avec succès"
+    )
+
 @router.delete("/{link_id}")
 async def delete_link(
     link_id: str,

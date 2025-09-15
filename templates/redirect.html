@@ -280,12 +280,13 @@
             // Récupérer les données du lien
             let linkData, config;
             try {
-                const response = await fetch('/api/v1/links/' + linkId);
+                const response = await fetch('/api/v1/links/redirect/' + linkId);
                 if (!response.ok) {
                     throw new Error('Lien non trouvé');
                 }
                 
-                linkData = await response.json();
+                const result = await response.json();
+                linkData = result.data;
                 addLog('📊 Données du lien récupérées', 'info');
                 addLog('📱 Projet: ' + linkData.project_name, 'info');
                 
