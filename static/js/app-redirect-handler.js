@@ -87,7 +87,6 @@ class AppRedirectHandler {
     }
 
     redirectToStore(deviceType) {
-     setTimeout(() => {
         if (deviceType === 'android' && this.config.androidPackage) {
             const playStoreUrl = `https://play.google.com/store/apps/details?id=${this.config.androidPackage}`;
             window.location.href = playStoreUrl;
@@ -97,7 +96,6 @@ class AppRedirectHandler {
         } else {
             window.location.href = this.config.fallbackUrl;
         }
-     }, 15000);
     }
 
     async handleAndroidRedirect(deeplink, linkData) {
