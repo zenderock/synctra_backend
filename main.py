@@ -15,6 +15,8 @@ from app.core.database import engine, Base
 from app.api.v1.api import api_router
 from app.api.sdk.v1.api import api_router as sdk_api_router
 from app.api.v1.endpoints.redirect import router as redirect_router
+from app.api.v1.endpoints.admin import router as admin_api_router
+from app.api.v1.endpoints.admin_routes import router as admin_routes_router
 from app.core.exceptions import SynctraException
 
 Base.metadata.create_all(bind=engine)
@@ -83,6 +85,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Routes API d'abord
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(sdk_api_router, prefix="/sdk/v1")
+app.include_router(admin_api_router, prefix="/api/v1/admin")
+
+# Routes d'interface admin
+app.include_router(admin_routes_router, prefix="/admin")
 
 # Route de santé
 @app.get("/health")
