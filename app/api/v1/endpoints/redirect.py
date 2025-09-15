@@ -32,8 +32,8 @@ async def redirect_link(
 ):
     """Rediriger vers l'URL cible ou afficher la page de redirection intelligente."""
     
-    # Éviter les requêtes pour les fichiers système
-    if short_code in ["favicon.ico", "robots.txt", "sitemap.xml", "docs", "redoc", "openapi.json"]:
+    # Éviter les requêtes pour les fichiers système et routes admin
+    if short_code in ["favicon.ico", "robots.txt", "sitemap.xml", "docs", "redoc", "openapi.json", "admin"]:
         raise HTTPException(status_code=404, detail="Ressource non trouvée")
     
     # Récupérer le lien
