@@ -86,51 +86,43 @@ class AppRedirectHandler {
         this.addLog('🗺️ Route actuelle: ' + window.location.href, 'info');
         this.addLog('📊 User Agent: ' + navigator.userAgent, 'info');
         
-        // Méthode 1: Intent URLs (plus fiables pour Android)
-        if (this.config.androidPackage) {
-            const intentUrl = `intent://${deeplink.replace(this.config.customScheme, '')}#Intent;scheme=${this.config.customScheme.replace('://', '')};package=${this.config.androidPackage};S.browser_fallback_url=${encodeURIComponent(this.config.fallbackUrl)};end`;
-            this.addLog('🤖 Intent URL générée: ' + intentUrl, 'info');
-            this.addLog('⏰ Tentative d\'ouverture Intent à: ' + new Date().toISOString(), 'info');
+        // Utiliser open-native-app pour une meilleure compatibilité
+        if (typeof openApp !== 'undefined') {
+            this.addLog('🚀 Utilisation de open-native-app', 'info');
+            this.addLog('⏰ Tentative d\'ouverture à: ' + new Date().toISOString(), 'info');
             
-            const intentSuccess = await this.tryIntentUrl(intentUrl);
-            this.addLog('📊 Résultat Intent URL: ' + intentSuccess, 'info');
-            
-            if (intentSuccess) {
-                this.addLog('✅ Intent URL réussie - app ouverte', 'success');
-                this.addLog('🎯 Succès à: ' + new Date().toISOString(), 'success');
-                return true;
-            }
-            this.addLog('❌ Intent URL échouée - app probablement non installée', 'error');
-            this.addLog('⏰ Échec Intent à: ' + new Date().toISOString(), 'error');
-        }
-
-        // Méthode 2: Custom scheme avec détection améliorée
-        this.addLog('🔄 Essai custom scheme...', 'warning');
-        this.addLog('⏰ Tentative custom scheme à: ' + new Date().toISOString(), 'info');
-        const isInstalled = await this.tryCustomSchemeAndroid(deeplink);
-        this.addLog('📊 Résultat custom scheme: ' + isInstalled, 'info');
-        
-        if (!isInstalled) {
-            this.addLog('❌ App non installée - toutes les méthodes ont échoué', 'error');
-            this.addLog('⏰ Échec final à: ' + new Date().toISOString(), 'error');
-            this.addLog('💾 Sauvegarde deferred link...', 'info');
-            await this.saveDeferredLink(linkData);
-            
-            this.addLog('🏪 Préparation redirection vers store...', 'warning');
-            if (this.config.androidPackage) {
-                const playStoreUrl = `https://play.google.com/store/apps/details?id=${this.config.androidPackage}`;
-                this.addLog('🏪 Play Store URL: ' + playStoreUrl, 'warning');
-                this.addLog('⏰ Redirection programmée dans 15s à: ' + new Date(Date.now() + 15000).toISOString(), 'warning');
-            } else {
-                this.addLog('🌐 Fallback URL: ' + this.config.fallbackUrl, 'warning');
-                this.addLog('⏰ Redirection fallback programmée dans 15s', 'warning');
-            }
-        } else {
-            this.addLog('✅ App installée et ouverte avec succès', 'success');
-            this.addLog('🎯 Succès custom scheme à: ' + new Date().toISOString(), 'success');
+            return new Promise((resolve) => {
+                openApp.open(
+                    deeplink,
+                    (code) => {
+                        this.addLog('📱 Callback plateforme: ' + code, 'info');
+                        this.addLog('❌ App non installée ou refusée', 'error');
+                        this.addLog('⏰ Échec à: ' + new Date().toISOString(), 'error');
+                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.saveDeferredLink(linkData);
+                        resolve(false);
+                    },
+                    () => {
+                        this.addLog('❌ Erreur lors de l\'ouverture', 'error');
+                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.saveDeferredLink(linkData);
+                        resolve(false);
+                    },
+                    3000 // Timeout de 3 secondes
+                );
+                
+                // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
+                setTimeout(() => {
+                    this.addLog('✅ App probablement ouverte (pas d\'erreur)', 'success');
+                    this.addLog('🎯 Succès présumé à: ' + new Date().toISOString(), 'success');
+                    resolve(true);
+                }, 2000);
+            });
         }
         
-        return isInstalled;
+        // Fallback vers l'ancienne méthode si open-native-app n'est pas disponible
+        this.addLog('⚠️ open-native-app non disponible, fallback', 'warning');
+        return this.tryCustomSchemeAndroid(deeplink);
     }
 
     // Nouvelle méthode pour Intent URLs
@@ -239,30 +231,44 @@ class AppRedirectHandler {
         this.addLog('🍎 iOS app ID: ' + this.config.iosAppId, 'info');
         this.addLog('🗺️ Route actuelle: ' + window.location.href, 'info');
         this.addLog('📊 User Agent: ' + navigator.userAgent, 'info');
-        this.addLog('⏰ Tentative d\'ouverture iOS à: ' + new Date().toISOString(), 'info');
         
-        const isInstalled = await this.tryCustomScheme(deeplink);
-        this.addLog('📊 Résultat custom scheme iOS: ' + isInstalled, 'info');
-        
-        if (!isInstalled) {
-            this.addLog('❌ App iOS non installée - échec de la tentative', 'error');
-            this.addLog('⏰ Échec iOS à: ' + new Date().toISOString(), 'error');
-            this.addLog('💾 Sauvegarde deferred link...', 'info');
-            await this.saveDeferredLink(linkData);
+        // Utiliser open-native-app pour iOS aussi
+        if (typeof openApp !== 'undefined') {
+            this.addLog('🚀 Utilisation de open-native-app pour iOS', 'info');
+            this.addLog('⏰ Tentative d\'ouverture iOS à: ' + new Date().toISOString(), 'info');
             
-            this.addLog('🏪 Préparation redirection vers App Store...', 'warning');
-            const appStoreUrl = this.config.iosAppId ? 
-                `https://apps.apple.com/app/id${this.config.iosAppId}` : 
-                this.config.fallbackUrl;
-            
-            this.addLog('🏪 App Store URL: ' + appStoreUrl, 'warning');
-            this.addLog('⏰ Redirection iOS programmée dans 15s à: ' + new Date(Date.now() + 15000).toISOString(), 'warning');
-        } else {
-            this.addLog('✅ App iOS installée et ouverte avec succès', 'success');
-            this.addLog('🎯 Succès iOS à: ' + new Date().toISOString(), 'success');
+            return new Promise((resolve) => {
+                openApp.open(
+                    deeplink,
+                    (code) => {
+                        this.addLog('📱 Callback iOS plateforme: ' + code, 'info');
+                        this.addLog('❌ App iOS non installée ou refusée', 'error');
+                        this.addLog('⏰ Échec iOS à: ' + new Date().toISOString(), 'error');
+                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.saveDeferredLink(linkData);
+                        resolve(false);
+                    },
+                    () => {
+                        this.addLog('❌ Erreur lors de l\'ouverture iOS', 'error');
+                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.saveDeferredLink(linkData);
+                        resolve(false);
+                    },
+                    3000 // Timeout de 3 secondes
+                );
+                
+                // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
+                setTimeout(() => {
+                    this.addLog('✅ App iOS probablement ouverte (pas d\'erreur)', 'success');
+                    this.addLog('🎯 Succès iOS présumé à: ' + new Date().toISOString(), 'success');
+                    resolve(true);
+                }, 2000);
+            });
         }
         
-        return isInstalled;
+        // Fallback vers l'ancienne méthode si open-native-app n'est pas disponible
+        this.addLog('⚠️ open-native-app non disponible, fallback iOS', 'warning');
+        return this.tryCustomScheme(deeplink);
     }
 
     tryCustomScheme(deeplink) {
