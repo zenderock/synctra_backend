@@ -37,9 +37,13 @@ class AppRedirectHandler {
         this.addLog('📱 Device type: ' + deviceType, 'info');
         this.addLog('🔗 Full deeplink: ' + fullDeeplink, 'info');
 
-        // Utiliser getInstalledRelatedApps si disponible (plus fiable)
-        if ('getInstalledRelatedApps' in navigator) {
-            this.addLog('🔍 Test getInstalledRelatedApps...', 'info');
+        // Vérifier si les assetlinks sont configurés pour ce projet
+        const hasAssetlinks = this.config.hasAssetlinks || this.config.hasAppleAssociation;
+        this.addLog('🔗 Assetlinks configurés: ' + hasAssetlinks, 'info');
+        this.addLog('📋 hasAssetlinks: ' + this.config.hasAssetlinks + ', hasAppleAssociation: ' + this.config.hasAppleAssociation, 'info');
+
+        if (hasAssetlinks && 'getInstalledRelatedApps' in navigator) {
+            this.addLog('🔍 Utilisation getInstalledRelatedApps (assetlinks configurés)', 'info');
             try {
                 const apps = await navigator.getInstalledRelatedApps();
                 this.addLog('📱 Apps trouvées: ' + JSON.stringify(apps), 'info');
@@ -59,14 +63,14 @@ class AppRedirectHandler {
                     return false;
                 }
             } catch (error) {
-                this.addLog('⚠️ getInstalledRelatedApps non supporté: ' + error.message, 'warning');
+                this.addLog('⚠️ getInstalledRelatedApps échoué: ' + error.message, 'warning');
+                this.addLog('🔄 Fallback vers open-native-app', 'info');
             }
         } else {
-            this.addLog('⚠️ getInstalledRelatedApps non disponible', 'warning');
+            this.addLog('🚀 Utilisation directe de open-native-app', 'info');
         }
 
-        // Méthode classique pour les navigateurs non supportés
-        this.addLog('🔄 Utilisation méthode classique...', 'info');
+        // Utiliser open-native-app ou méthodes classiques
         if (deviceType === 'android') {
             this.addLog('🤖 Redirection vers handleAndroidRedirect', 'info');
             return this.handleAndroidRedirect(fullDeeplink, linkData);

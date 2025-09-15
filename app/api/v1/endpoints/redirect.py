@@ -95,7 +95,11 @@ async def redirect_link(
             "original_url": str(link.original_url),
             "api_key": project.api_key,
             "project_id": project.id,
-            "link_id": str(link.id)
+            "link_id": str(link.id),
+            "assetlinks_json": project.assetlinks_json,
+            "apple_app_site_association": project.apple_app_site_association,
+            "has_assetlinks": "true" if project.assetlinks_json else "false",
+            "has_apple_association": "true" if project.apple_app_site_association else "false"
         })
     
     elif user_agent.is_mobile:
