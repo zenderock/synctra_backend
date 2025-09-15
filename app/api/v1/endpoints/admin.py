@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.models.user import User
 from app.models.project import Project
 from app.models.dynamic_link import DynamicLink
-from app.models.click import Click
+from app.models.link_click import LinkClick
 from app.schemas.response import ApiResponse
 
 router = APIRouter()
@@ -25,12 +25,12 @@ async def get_admin_stats(db: Session = Depends(get_db)):
     
     # Clics aujourd'hui
     today = datetime.now().date()
-    today_clicks = db.query(Click).filter(
-        func.date(Click.created_at) == today
+    today_clicks = db.query(LinkClick).filter(
+        func.date(LinkClick.created_at) == today
     ).count()
     
     # Taux de conversion (liens avec au moins 1 clic)
-    links_with_clicks = db.query(DynamicLink).join(Click).distinct().count()
+    links_with_clicks = db.query(DynamicLink).join(LinkClick).distinct().count()
     conversion_rate = round((links_with_clicks / total_links * 100) if total_links > 0 else 0, 1)
     
     return ApiResponse.success(
@@ -126,7 +126,7 @@ async def get_admin_links(
     links_data = []
     for link in links:
         # Compter les clics
-        click_count = db.query(Click).filter(Click.link_id == link.id).count()
+        click_count = db.query(LinkClick).filter(LinkClick.link_id == link.id).count()
         
         links_data.append({
             "id": str(link.id),
@@ -192,7 +192,7 @@ async def get_admin_projects(
         links_count = db.query(DynamicLink).filter(DynamicLink.project_id == project.id).count()
         
         # Compter les clics totaux
-        total_clicks = db.query(func.count(Click.id)).join(DynamicLink).filter(
+        total_clicks = db.query(func.count(LinkClick.id)).join(DynamicLink).filter(
             DynamicLink.project_id == project.id
         ).scalar() or 0
         
