@@ -260,171 +260,111 @@
     <script src="https://cdn.jsdelivr.net/npm/open-native-app@0.3.3/assets/index.min.js"></script>
     <script src="/static/js/app-redirect-handler.js"></script>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const linkId = urlParams.get('id');
-        const deeplink = urlParams.get('dl') || '';
-        
-        const config = {
-            customScheme: '{{ custom_scheme }}',
-            androidPackage: '{{ android_package }}',
-            iosAppId: '{{ ios_app_id }}',
-            fallbackUrl: '{{ fallback_url }}',
-            androidFallbackUrl: '{{ android_fallback_url }}',
-            iosFallbackUrl: '{{ ios_fallback_url }}',
-            hasAssetlinks: '{{ has_assetlinks }}' === 'true',
-            hasAppleAssociation: '{{ has_apple_association }}' === 'true',
-            timeout: 3000,
-            apiKey: '{{ api_key }}',
-            projectId: '{{ project_id }}',
-            apiBaseUrl: '/sdk/v1'
-        };
-
-        const linkData = {
-            linkId: linkId,
-            deeplink: deeplink,
-            originalUrl: '{{ original_url }}',
-            parameters: {
-                utm_source: '{{ utm_source }}',
-                utm_medium: '{{ utm_medium }}',
-                utm_campaign: '{{ utm_campaign }}',
-                utm_content: '{{ utm_content }}',
-                utm_term: '{{ utm_term }}'
-            }
-        };
-
         async function initRedirect() {
-            const statusEl = document.getElementById('status');
-            const fallbackBtn = document.getElementById('fallbackBtn');
+            addLog('🚀 Initialisation de la redirection...', 'info');
             
-            addLog('🔄 Début de la redirection...', 'info');
+            // Récupérer le linkId depuis l'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const linkId = urlParams.get('linkId');
             
+            if (!linkId) {
+                addLog('❌ Aucun linkId trouvé dans l\'URL', 'error');
+                statusEl.textContent = 'Lien invalide';
+                return;
+            }
+            
+            addLog('🔗 LinkId trouvé: ' + linkId, 'info');
+            statusEl.textContent = 'Chargement des informations du lien...';
+            
+            // Récupérer les données du lien
+            let linkData, config;
             try {
-                statusEl.textContent = 'Détection de l\'appareil...';
-                addLog('📱 Détection de l\'appareil...', 'info');
-                
-                // Vérifier que AppRedirectHandler est chargé
-                if (typeof AppRedirectHandler === 'undefined') {
-                    addLog('❌ AppRedirectHandler non chargé - tentative de fallback', 'error');
-                    // Fallback simple sans la classe
-                    const userAgent = navigator.userAgent.toLowerCase();
-                    let deviceType = 'desktop';
-                    if (/android/.test(userAgent)) deviceType = 'android';
-                    else if (/iphone|ipad|ipod/.test(userAgent)) deviceType = 'ios';
-                    
-                    addLog('📱 Type d\'appareil (fallback): ' + deviceType, 'info');
-                    
-                    if (deviceType === 'android' && config.androidPackage) {
-                        addLog('🤖 Redirection Android directe...', 'info');
-                        
-                        // Utiliser le custom scheme configuré dans le projet avec linkId
-                        const deeplinkWithId = config.customScheme + 'deeplink?linkId=' + linkId;
-                        addLog('🔗 Deeplink généré: ' + deeplinkWithId, 'info');
-                        
-                        // Essayer d'ouvrir l'app avec le scheme configuré après 20s pour voir les logs
-                        setTimeout(() => {
-                            addLog('🚀 Redirection vers l\'app après 20s...', 'info');
-                            window.location.href = deeplinkWithId;
-                        }, 20000);
-                        
-                        // Si l'app ne s'ouvre pas, utiliser l'URL de fallback configurée
-                        setTimeout(() => {
-                            const fallbackUrl = config.androidFallbackUrl || config.fallbackUrl;
-                            addLog('🏪 Fallback configuré: ' + fallbackUrl, 'warning');
-                            window.location.href = fallbackUrl;
-                        }, 15000);
-                    } else if (deviceType === 'ios' && config.iosAppId) {
-                        addLog('🍎 Redirection iOS directe...', 'info');
-                        
-                        // Tentative d'ouverture de l'app avec linkId
-                        const deeplinkWithId = config.customScheme + 'deeplink?linkId=' + linkId;
-                        addLog('🔗 Tentative avec: ' + deeplinkWithId, 'info');
-                        
-                        // Redirection après 20s pour voir les logs
-                        setTimeout(() => {
-                            addLog('🚀 Redirection iOS vers l\'app après 20s...', 'info');
-                            window.location.href = deeplinkWithId;
-                        }, 20000);
-                        
-                        // Fallback vers l'URL configurée
-                        setTimeout(() => {
-                            const fallbackUrl = config.iosFallbackUrl || config.fallbackUrl;
-                            addLog('🏪 Fallback iOS configuré: ' + fallbackUrl, 'warning');
-                            window.location.href = fallbackUrl;
-                        }, 15000);
-                    } else {
-                        addLog('💻 Redirection fallback URL...', 'info');
-                        setTimeout(() => {
-                            window.location.href = config.fallbackUrl;
-                        }, 1000);
-                    }
-                    return;
+                const response = await fetch('/api/v1/links/' + linkId);
+                if (!response.ok) {
+                    throw new Error('Lien non trouvé');
                 }
                 
-                const handler = new AppRedirectHandler(config);
-                const deviceType = handler.getDeviceType();
-                addLog('📱 Type d\'appareil détecté: ' + deviceType, 'info');
+                linkData = await response.json();
+                addLog('📊 Données du lien récupérées', 'info');
+                addLog('📱 Projet: ' + linkData.project_name, 'info');
                 
-                if (deviceType === 'desktop') {
-                    statusEl.textContent = 'Redirection vers la version web...';
-                    addLog('💻 Desktop détecté - redirection web', 'info');
-                    setTimeout(() => {
-                        window.location.href = config.fallbackUrl;
-                    }, 1000);
-                    return;
-                }
-                
-                statusEl.textContent = 'Tentative d\'ouverture de l\'application...';
-                addLog('🚀 Tentative d\'ouverture de l\'application...', 'info');
-                
-                // Ajouter un délai pour voir si l'app s'ouvre
-                let appOpened = false;
-                
-                // Détecter si l'utilisateur quitte la page (app s'ouvre)
-                const handleVisibilityChange = () => {
-                    if (document.hidden) {
-                        appOpened = true;
-                        statusEl.textContent = 'Application ouverte avec succès !';
-                        addLog('✅ Application ouverte avec succès !', 'success');
-                    }
+                config = {
+                    androidPackage: linkData.android_package,
+                    iosAppId: linkData.ios_app_id,
+                    customScheme: linkData.custom_scheme,
+                    fallbackUrl: linkData.fallback_url,
+                    androidFallbackUrl: linkData.android_fallback_url,
+                    iosFallbackUrl: linkData.ios_fallback_url
                 };
                 
-                const handlePageHide = () => {
-                    appOpened = true;
-                    addLog('✅ Page cachée - app probablement ouverte', 'success');
-                };
-                
-                document.addEventListener('visibilitychange', handleVisibilityChange);
-                window.addEventListener('pagehide', handlePageHide);
-                
-                addLog('🔄 Appel de handleAppRedirect...', 'info');
-                const success = await handler.handleAppRedirect(deeplink, linkData);
-                addLog('📊 Résultat handleAppRedirect: ' + success, 'info');
-                
-                // Attendre un peu pour voir si l'app s'est ouverte
-                setTimeout(() => {
-                    document.removeEventListener('visibilitychange', handleVisibilityChange);
-                    window.removeEventListener('pagehide', handlePageHide);
-                    
-                    if (!appOpened && !success) {
-                        statusEl.textContent = 'Application non détectée. Redirection vers le store...';
-                        addLog('❌ App non détectée - affichage bouton fallback', 'error');
-                        
-                        setTimeout(() => {
-                            fallbackBtn.style.display = 'inline-block';
-                            statusEl.textContent = 'Si la redirection ne fonctionne pas, cliquez ci-dessous :';
-                        }, 1500);
-                    } else if (appOpened) {
-                        statusEl.textContent = 'Application ouverte avec succès !';
-                        addLog('✅ Confirmation: Application ouverte', 'success');
-                    }
-                }, 15000);
+                addLog('⚙️ Configuration: ' + JSON.stringify(config), 'info');
                 
             } catch (error) {
-                console.error('Erreur de redirection:', error);
-                addLog('❌ ERREUR: ' + error.message, 'error');
-                statusEl.textContent = 'Erreur lors de la redirection...';
-                fallbackBtn.style.display = 'inline-block';
+                addLog('❌ Erreur lors de la récupération: ' + error.message, 'error');
+                statusEl.textContent = 'Erreur lors du chargement';
+                return;
             }
+            
+            // Si pas de configuration d'app, redirection directe
+            if (!config.androidPackage && !config.iosAppId && !config.customScheme) {
+                addLog('⚠️ Aucune configuration d\'app - redirection directe', 'warning');
+                window.location.href = config.fallbackUrl;
+                return;
+            }
+            
+            // Détection du type d'appareil
+            const userAgent = navigator.userAgent.toLowerCase();
+            let deviceType = 'desktop';
+            if (/android/.test(userAgent)) deviceType = 'android';
+            else if (/iphone|ipad|ipod/.test(userAgent)) deviceType = 'ios';
+            
+            addLog('📱 Type d\'appareil détecté: ' + deviceType, 'info');
+            
+            // Desktop - redirection directe
+            if (deviceType === 'desktop') {
+                addLog('💻 Desktop détecté - redirection web', 'info');
+                statusEl.textContent = 'Redirection vers la version web...';
+                setTimeout(() => {
+                    window.location.href = config.fallbackUrl;
+                }, 1000);
+                return;
+            }
+            
+            // Mobile - logique centralisée
+            statusEl.textContent = 'Tentative d\'ouverture de l\'application...';
+            
+            const deeplink = config.customScheme + 'deeplink?linkId=' + linkId;
+            addLog('🔗 Deeplink généré: ' + deeplink, 'info');
+            
+            // Attendre 20s pour voir les logs
+            addLog('⏱️ Attente de 20s pour voir les logs...', 'info');
+            setTimeout(() => {
+                addLog('🚀 Tentative d\'ouverture de l\'app...', 'info');
+                
+                // Tenter d'ouvrir l'app
+                window.location.href = deeplink;
+                
+                // Fallback après 5s si l'app ne s'ouvre pas
+                setTimeout(() => {
+                    let fallbackUrl;
+                    
+                    if (deviceType === 'android' && config.androidPackage) {
+                        fallbackUrl = config.androidFallbackUrl || 'https://play.google.com/store/apps/details?id=' + config.androidPackage;
+                        addLog('🤖 Fallback Android: ' + fallbackUrl, 'warning');
+                    } else if (deviceType === 'ios' && config.iosAppId) {
+                        fallbackUrl = config.iosFallbackUrl || 'https://apps.apple.com/app/id' + config.iosAppId;
+                        addLog('🍎 Fallback iOS: ' + fallbackUrl, 'warning');
+                    } else {
+                        fallbackUrl = config.fallbackUrl;
+                        addLog('💻 Fallback général: ' + fallbackUrl, 'warning');
+                    }
+                    
+                    statusEl.textContent = 'Redirection vers le store...';
+                    window.location.href = fallbackUrl;
+                    
+                }, 5000);
+                
+            }, 20000);
         }
 
         function handleFallback() {
