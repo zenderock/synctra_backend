@@ -261,6 +261,7 @@
     <script src="/static/js/app-redirect-handler.js"></script>
     <script>
         async function initRedirect() {
+            const statusEl = document.getElementById('status');
             addLog('🚀 Initialisation de la redirection...', 'info');
             
             // Récupérer le linkId depuis l'URL
@@ -298,6 +299,10 @@
                 };
                 
                 addLog('⚙️ Configuration: ' + JSON.stringify(config), 'info');
+                addLog('🔧 Utilisation du custom scheme configuré: ' + config.customScheme, 'info');
+                
+                // Sauvegarder la config globalement
+                globalConfig = config;
                 
             } catch (error) {
                 addLog('❌ Erreur lors de la récupération: ' + error.message, 'error');
@@ -367,8 +372,12 @@
             }, 20000);
         }
 
+        let globalConfig = null;
+        
         function handleFallback() {
-            window.location.href = config.fallbackUrl;
+            if (globalConfig) {
+                window.location.href = globalConfig.fallbackUrl;
+            }
         }
 
         // Système de logs de debug
@@ -406,14 +415,6 @@
 
         // Ajouter un log de test au démarrage
         addLog('🚀 Système de logs initialisé', 'info');
-        addLog('📱 Configuration: ' + JSON.stringify({
-            scheme: config.customScheme,
-            android: config.androidPackage,
-            ios: config.iosAppId
-        }), 'info');
-        
-        // Le système utilise maintenant la configuration dynamique du projet
-        addLog('🔧 Utilisation du custom scheme configuré: ' + config.customScheme, 'info');
 
         setTimeout(() => {
             const fallbackBtn = document.getElementById('fallbackBtn');
@@ -425,18 +426,7 @@
 
         window.addEventListener('load', initRedirect);
 
-        window.addEventListener('pageshow', (event) => {
-            if (event.persisted) {
-                document.getElementById('status').textContent = 'Retour détecté. Vérification des données...';
-                
-                const handler = new AppRedirectHandler(config);
-                const deferred = handler.getLocalDeferred();
-                
-                if (deferred) {
-                    console.log('Données différées trouvées:', deferred);
-                }
-            }
-        });
+        // Supprimer le pageshow qui utilise AppRedirectHandler et config non défini
     </script>
 </body>
 </html>
