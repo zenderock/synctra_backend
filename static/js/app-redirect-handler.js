@@ -115,30 +115,35 @@ class AppRedirectHandler {
             this.addLog('🚀 Tentative d\'ouverture avec open-native-app', 'info');
             
             return new Promise((resolve) => {
-                openApp.open(
-                    deeplink,
-                    (code) => {
-                        this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection Play Store', 'info');
-                        this.saveSignature(linkData);
-                        this.redirectToStore('android');
-                        resolve(false);
-                    },
-                    () => {
-                        this.addLog('❌ Erreur lors de l\'ouverture', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection Play Store', 'info');
-                        this.saveSignature(linkData);
-                        this.redirectToStore('android');
-                        resolve(false);
-                    },
-                    3000 // Timeout de 3 secondes
-                );
-                
-                // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
+                // Attendre 20s avant de tenter l'ouverture pour voir les logs
                 setTimeout(() => {
-                    this.addLog('✅ App probablement ouverte avec succès', 'success');
-                    resolve(true);
-                }, 2000);
+                    this.addLog('🚀 Ouverture de l\'app Android après 20s...', 'info');
+                    
+                    openApp.open(
+                        deeplink,
+                        (code) => {
+                            this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
+                            this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection Play Store', 'info');
+                            this.saveSignature(linkData);
+                            this.redirectToStore('android');
+                            resolve(false);
+                        },
+                        () => {
+                            this.addLog('❌ Erreur lors de l\'ouverture', 'error');
+                            this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection Play Store', 'info');
+                            this.saveSignature(linkData);
+                            this.redirectToStore('android');
+                            resolve(false);
+                        },
+                        3000 // Timeout de 3 secondes
+                    );
+                    
+                    // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
+                    setTimeout(() => {
+                        this.addLog('✅ App probablement ouverte avec succès', 'success');
+                        resolve(true);
+                    }, 2000);
+                }, 20000);
             });
         }
         
@@ -258,30 +263,35 @@ class AppRedirectHandler {
             this.addLog('🚀 Tentative d\'ouverture avec open-native-app', 'info');
             
             return new Promise((resolve) => {
-                openApp.open(
-                    deeplink,
-                    (code) => {
-                        this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection App Store', 'info');
-                        this.saveSignature(linkData);
-                        this.redirectToStore('ios');
-                        resolve(false);
-                    },
-                    () => {
-                        this.addLog('❌ Erreur lors de l\'ouverture', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection App Store', 'info');
-                        this.saveSignature(linkData);
-                        this.redirectToStore('ios');
-                        resolve(false);
-                    },
-                    3000 // Timeout de 3 secondes
-                );
-                
-                // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
+                // Attendre 20s avant de tenter l'ouverture pour voir les logs
                 setTimeout(() => {
-                    this.addLog('✅ App probablement ouverte avec succès', 'success');
-                    resolve(true);
-                }, 2000);
+                    this.addLog('🚀 Ouverture de l\'app iOS après 20s...', 'info');
+                    
+                    openApp.open(
+                        deeplink,
+                        (code) => {
+                            this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
+                            this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection App Store', 'info');
+                            this.saveSignature(linkData);
+                            this.redirectToStore('ios');
+                            resolve(false);
+                        },
+                        () => {
+                            this.addLog('❌ Erreur lors de l\'ouverture', 'error');
+                            this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection App Store', 'info');
+                            this.saveSignature(linkData);
+                            this.redirectToStore('ios');
+                            resolve(false);
+                        },
+                        3000 // Timeout de 3 secondes
+                    );
+                    
+                    // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
+                    setTimeout(() => {
+                        this.addLog('✅ App probablement ouverte avec succès', 'success');
+                        resolve(true);
+                    }, 2000);
+                }, 20000);
             });
         }
         
