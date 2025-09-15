@@ -32,35 +32,49 @@ class AppRedirectHandler {
     async handleAppRedirect(deeplink = '', linkData = {}) {
         const deviceType = this.getDeviceType();
         const fullDeeplink = this.config.customScheme + deeplink;
+        
+        this.addLog('🔍 handleAppRedirect appelé avec: ' + deeplink, 'info');
+        this.addLog('📱 Device type: ' + deviceType, 'info');
+        this.addLog('🔗 Full deeplink: ' + fullDeeplink, 'info');
 
         // Utiliser getInstalledRelatedApps si disponible (plus fiable)
         if ('getInstalledRelatedApps' in navigator) {
+            this.addLog('🔍 Test getInstalledRelatedApps...', 'info');
             try {
                 const apps = await navigator.getInstalledRelatedApps();
+                this.addLog('📱 Apps trouvées: ' + JSON.stringify(apps), 'info');
                 const isAppInstalled = apps.some(app => 
                     (app.platform === 'play' && app.id === this.config.androidPackage) ||
                     (app.platform === 'itunes' && app.id === this.config.iosAppId)
                 );
                 
                 if (isAppInstalled) {
+                    this.addLog('✅ App détectée via getInstalledRelatedApps', 'success');
                     window.location.href = fullDeeplink;
                     return true;
                 } else {
+                    this.addLog('❌ App non détectée via getInstalledRelatedApps', 'error');
                     await this.saveDeferredLink(linkData);
                     this.redirectToStore(deviceType);
                     return false;
                 }
             } catch (error) {
-                console.log('getInstalledRelatedApps non supporté, utilisation méthode classique');
+                this.addLog('⚠️ getInstalledRelatedApps non supporté: ' + error.message, 'warning');
             }
+        } else {
+            this.addLog('⚠️ getInstalledRelatedApps non disponible', 'warning');
         }
 
         // Méthode classique pour les navigateurs non supportés
+        this.addLog('🔄 Utilisation méthode classique...', 'info');
         if (deviceType === 'android') {
+            this.addLog('🤖 Redirection vers handleAndroidRedirect', 'info');
             return this.handleAndroidRedirect(fullDeeplink, linkData);
         } else if (deviceType === 'ios') {
+            this.addLog('🍎 Redirection vers handleIOSRedirect', 'info');
             return this.handleIOSRedirect(fullDeeplink, linkData);
         } else {
+            this.addLog('💻 Desktop détecté - fallback URL', 'info');
             window.location.href = this.config.fallbackUrl;
             return false;
         }
