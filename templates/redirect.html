@@ -264,9 +264,9 @@
             const statusEl = document.getElementById('status');
             addLog('🚀 Initialisation de la redirection...', 'info');
             
-            // Récupérer le linkId depuis l'URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const linkId = urlParams.get('linkId');
+            // Récupérer le linkId depuis le path de l'URL (ex: /nn0U2hHW)
+            const path = window.location.pathname;
+            const linkId = path.substring(1); // Enlever le "/" du début
             
             if (!linkId) {
                 addLog('❌ Aucun linkId trouvé dans l\'URL', 'error');
