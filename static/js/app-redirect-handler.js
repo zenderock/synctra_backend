@@ -54,8 +54,8 @@ class AppRedirectHandler {
                 );
                 
                 if (isAppInstalled) {
-                    this.addLog('✅ App détectée via getInstalledRelatedApps - ouverture avec code uniquement', 'success');
-                    const simpleDeeplink = this.config.customScheme + linkData.linkId;
+                    this.addLog('✅ App détectée via getInstalledRelatedApps - ouverture avec linkId', 'success');
+                    const simpleDeeplink = this.config.customScheme + 'deeplink?linkId=' + linkData.linkId;
                     window.location.href = simpleDeeplink;
                     return true;
                 } else {
