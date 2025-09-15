@@ -54,13 +54,14 @@ class AppRedirectHandler {
                 );
                 
                 if (isAppInstalled) {
-                    this.addLog('✅ App détectée via getInstalledRelatedApps - ouverture directe', 'success');
-                    window.location.href = fullDeeplink;
+                    this.addLog('✅ App détectée via getInstalledRelatedApps - ouverture avec code uniquement', 'success');
+                    const simpleDeeplink = this.config.customScheme + linkData.linkId;
+                    window.location.href = simpleDeeplink;
                     return true;
                 } else {
                     this.addLog('❌ App non détectée via getInstalledRelatedApps', 'error');
-                    this.addLog('🏪 ÉTAPE 4: Redirection vers le store', 'info');
-                    await this.saveDeferredLink(linkData);
+                    this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection store', 'info');
+                    await this.saveSignature(linkData);
                     this.redirectToStore(deviceType);
                     return false;
                 }
@@ -112,15 +113,15 @@ class AppRedirectHandler {
                     deeplink,
                     (code) => {
                         this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Redirection vers Play Store', 'info');
-                        this.saveDeferredLink(linkData);
+                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection Play Store', 'info');
+                        this.saveSignature(linkData);
                         this.redirectToStore('android');
                         resolve(false);
                     },
                     () => {
                         this.addLog('❌ Erreur lors de l\'ouverture', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Redirection vers Play Store', 'info');
-                        this.saveDeferredLink(linkData);
+                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection Play Store', 'info');
+                        this.saveSignature(linkData);
                         this.redirectToStore('android');
                         resolve(false);
                     },
@@ -255,15 +256,15 @@ class AppRedirectHandler {
                     deeplink,
                     (code) => {
                         this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Redirection vers App Store', 'info');
-                        this.saveDeferredLink(linkData);
+                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection App Store', 'info');
+                        this.saveSignature(linkData);
                         this.redirectToStore('ios');
                         resolve(false);
                     },
                     () => {
                         this.addLog('❌ Erreur lors de l\'ouverture', 'error');
-                        this.addLog('🏪 ÉTAPE 4: Redirection vers App Store', 'info');
-                        this.saveDeferredLink(linkData);
+                        this.addLog('🏪 ÉTAPE 4: Enregistrement signature + redirection App Store', 'info');
+                        this.saveSignature(linkData);
                         this.redirectToStore('ios');
                         resolve(false);
                     },
@@ -329,6 +330,46 @@ class AppRedirectHandler {
                 }
             }, 100);
         });
+    }
+
+    async saveSignature(linkData) {
+        try {
+            const deviceType = this.getDeviceType();
+            const deviceId = this.generateDeviceId();
+            
+            const payload = {
+                linkId: linkData.linkId,
+                packageName: this.config.androidPackage || this.config.iosAppId,
+                deviceId: deviceId,
+                platform: deviceType,
+                timestamp: new Date().toISOString(),
+                parameters: linkData.parameters || {},
+                originalUrl: linkData.originalUrl,
+                metadata: {
+                    userAgent: navigator.userAgent,
+                    referrer: document.referrer,
+                    currentUrl: window.location.href
+                }
+            };
+
+            const response = await fetch(`${this.config.apiBaseUrl}/deferred-links`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.config.apiKey}`,
+                    'X-Project-ID': this.config.projectId,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                this.addLog('✅ Signature enregistrée avec succès', 'success');
+            } else {
+                this.addLog('⚠️ Échec enregistrement signature: ' + response.status, 'warning');
+            }
+        } catch (error) {
+            this.addLog('❌ Erreur enregistrement signature: ' + error.message, 'error');
+        }
     }
 
     async saveDeferredLink(linkData) {
