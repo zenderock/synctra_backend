@@ -82,13 +82,11 @@ async def synctra_exception_handler(request: Request, exc: SynctraException):
 # Servir les fichiers statiques
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Routes API d'abord
+# Routes spécifiques d'abord (ordre important)
+app.include_router(admin_routes_router, prefix="/admin")
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(sdk_api_router, prefix="/sdk/v1")
 app.include_router(admin_api_router, prefix="/api/v1/admin")
-
-# Routes d'interface admin
-app.include_router(admin_routes_router, prefix="/admin")
 
 # Route de santé
 @app.get("/health")
