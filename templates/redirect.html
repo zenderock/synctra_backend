@@ -129,7 +129,6 @@
         }
 
         .debug-logs {
-            display: none;
             margin-top: 2rem;
             padding: 1rem;
             background-color: #f8f9fa;
@@ -321,8 +320,11 @@
                         const deeplinkWithId = config.customScheme + 'deeplink?linkId=' + linkId;
                         addLog('🔗 Deeplink généré: ' + deeplinkWithId, 'info');
                         
-                        // Essayer d'ouvrir l'app avec le scheme configuré
-                        window.location.href = deeplinkWithId;
+                        // Essayer d'ouvrir l'app avec le scheme configuré après 20s pour voir les logs
+                        setTimeout(() => {
+                            addLog('🚀 Redirection vers l\'app après 20s...', 'info');
+                            window.location.href = deeplinkWithId;
+                        }, 20000);
                         
                         // Si l'app ne s'ouvre pas, utiliser l'URL de fallback configurée
                         setTimeout(() => {
@@ -336,7 +338,12 @@
                         // Tentative d'ouverture de l'app avec linkId
                         const deeplinkWithId = config.customScheme + 'deeplink?linkId=' + linkId;
                         addLog('🔗 Tentative avec: ' + deeplinkWithId, 'info');
-                        window.location.href = deeplinkWithId;
+                        
+                        // Redirection après 20s pour voir les logs
+                        setTimeout(() => {
+                            addLog('🚀 Redirection iOS vers l\'app après 20s...', 'info');
+                            window.location.href = deeplinkWithId;
+                        }, 20000);
                         
                         // Fallback vers l'URL configurée
                         setTimeout(() => {

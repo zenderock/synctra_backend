@@ -56,7 +56,13 @@ class AppRedirectHandler {
                 if (isAppInstalled) {
                     this.addLog('✅ App détectée via getInstalledRelatedApps - ouverture avec linkId', 'success');
                     const simpleDeeplink = this.config.customScheme + 'deeplink?linkId=' + linkData.linkId;
-                    window.location.href = simpleDeeplink;
+                    this.addLog('🔗 Deeplink final: ' + simpleDeeplink, 'info');
+                    
+                    // Redirection après 20s pour voir les logs
+                    setTimeout(() => {
+                        this.addLog('🚀 Redirection vers l\'app après 20s...', 'info');
+                        window.location.href = simpleDeeplink;
+                    }, 20000);
                     return true;
                 } else {
                     this.addLog('❌ App non détectée via getInstalledRelatedApps', 'error');
