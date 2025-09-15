@@ -285,11 +285,11 @@
             deeplink: deeplink,
             originalUrl: '{{ original_url }}',
             parameters: {
-                utm_source: urlParams.get('utm_source'),
-                utm_medium: urlParams.get('utm_medium'),
-                utm_campaign: urlParams.get('utm_campaign'),
-                utm_content: urlParams.get('utm_content'),
-                utm_term: urlParams.get('utm_term')
+                utm_source: '{{ utm_source }}',
+                utm_medium: '{{ utm_medium }}',
+                utm_campaign: '{{ utm_campaign }}',
+                utm_content: '{{ utm_content }}',
+                utm_term: '{{ utm_term }}'
             }
         };
 

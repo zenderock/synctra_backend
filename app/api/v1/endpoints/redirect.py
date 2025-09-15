@@ -99,7 +99,12 @@ async def redirect_link(
             "assetlinks_json": project.assetlinks_json,
             "apple_app_site_association": project.apple_app_site_association,
             "has_assetlinks": "true" if project.assetlinks_json else "false",
-            "has_apple_association": "true" if project.apple_app_site_association else "false"
+            "has_apple_association": "true" if project.apple_app_site_association else "false",
+            "utm_source": link.utm_source or "",
+            "utm_medium": link.utm_medium or "",
+            "utm_campaign": link.utm_campaign or "",
+            "utm_content": link.utm_content or "",
+            "utm_term": link.utm_term or ""
         })
     
     elif user_agent.is_mobile:
