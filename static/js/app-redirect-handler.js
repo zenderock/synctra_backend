@@ -37,13 +37,14 @@ class AppRedirectHandler {
         this.addLog('📱 Device type: ' + deviceType, 'info');
         this.addLog('🔗 Full deeplink: ' + fullDeeplink, 'info');
 
-        // Vérifier si les assetlinks sont configurés pour ce projet
+        // ÉTAPE 2: Vérifier si les assetlinks sont configurés pour ce projet
         const hasAssetlinks = this.config.hasAssetlinks || this.config.hasAppleAssociation;
-        this.addLog('🔗 Assetlinks configurés: ' + hasAssetlinks, 'info');
-        this.addLog('📋 hasAssetlinks: ' + this.config.hasAssetlinks + ', hasAppleAssociation: ' + this.config.hasAppleAssociation, 'info');
+        this.addLog('🔗 ÉTAPE 2: Assetlinks configurés: ' + hasAssetlinks, 'info');
+        this.addLog('📋 Android assetlinks: ' + this.config.hasAssetlinks + ', iOS association: ' + this.config.hasAppleAssociation, 'info');
 
+        // ÉTAPE 3A: Si assetlinks configurés, utiliser getInstalledRelatedApps
         if (hasAssetlinks && 'getInstalledRelatedApps' in navigator) {
-            this.addLog('🔍 Utilisation getInstalledRelatedApps (assetlinks configurés)', 'info');
+            this.addLog('🔍 ÉTAPE 3A: Utilisation getInstalledRelatedApps (assetlinks configurés)', 'info');
             try {
                 const apps = await navigator.getInstalledRelatedApps();
                 this.addLog('📱 Apps trouvées: ' + JSON.stringify(apps), 'info');
@@ -53,21 +54,22 @@ class AppRedirectHandler {
                 );
                 
                 if (isAppInstalled) {
-                    this.addLog('✅ App détectée via getInstalledRelatedApps', 'success');
+                    this.addLog('✅ App détectée via getInstalledRelatedApps - ouverture directe', 'success');
                     window.location.href = fullDeeplink;
                     return true;
                 } else {
                     this.addLog('❌ App non détectée via getInstalledRelatedApps', 'error');
+                    this.addLog('🏪 ÉTAPE 4: Redirection vers le store', 'info');
                     await this.saveDeferredLink(linkData);
                     this.redirectToStore(deviceType);
                     return false;
                 }
             } catch (error) {
                 this.addLog('⚠️ getInstalledRelatedApps échoué: ' + error.message, 'warning');
-                this.addLog('🔄 Fallback vers open-native-app', 'info');
+                this.addLog('🔄 Fallback vers ÉTAPE 3B', 'info');
             }
         } else {
-            this.addLog('🚀 Utilisation directe de open-native-app', 'info');
+            this.addLog('🚀 ÉTAPE 3B: Utilisation directe de open-native-app (pas d\'assetlinks)', 'info');
         }
 
         // Utiliser open-native-app ou méthodes classiques
@@ -99,31 +101,29 @@ class AppRedirectHandler {
     }
 
     async handleAndroidRedirect(deeplink, linkData) {
-        this.addLog('🤖 Android redirect - deeplink: ' + deeplink, 'info');
-        this.addLog('🤖 Android package: ' + this.config.androidPackage, 'info');
-        this.addLog('🗺️ Route actuelle: ' + window.location.href, 'info');
-        this.addLog('📊 User Agent: ' + navigator.userAgent, 'info');
+        this.addLog('🤖 ÉTAPE 3B: Android redirect avec open-native-app', 'info');
+        this.addLog('🔗 Deeplink: ' + deeplink, 'info');
+        this.addLog('📦 Package: ' + this.config.androidPackage, 'info');
         
         // Utiliser open-native-app pour une meilleure compatibilité
         if (typeof openApp !== 'undefined') {
-            this.addLog('🚀 Utilisation de open-native-app', 'info');
-            this.addLog('⏰ Tentative d\'ouverture à: ' + new Date().toISOString(), 'info');
+            this.addLog('🚀 Tentative d\'ouverture avec open-native-app', 'info');
             
             return new Promise((resolve) => {
                 openApp.open(
                     deeplink,
                     (code) => {
-                        this.addLog('📱 Callback plateforme: ' + code, 'info');
-                        this.addLog('❌ App non installée ou refusée', 'error');
-                        this.addLog('⏰ Échec à: ' + new Date().toISOString(), 'error');
-                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
+                        this.addLog('🏪 ÉTAPE 4: Redirection vers Play Store', 'info');
                         this.saveDeferredLink(linkData);
+                        this.redirectToStore('android');
                         resolve(false);
                     },
                     () => {
                         this.addLog('❌ Erreur lors de l\'ouverture', 'error');
-                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.addLog('🏪 ÉTAPE 4: Redirection vers Play Store', 'info');
                         this.saveDeferredLink(linkData);
+                        this.redirectToStore('android');
                         resolve(false);
                     },
                     3000 // Timeout de 3 secondes
@@ -131,8 +131,7 @@ class AppRedirectHandler {
                 
                 // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
                 setTimeout(() => {
-                    this.addLog('✅ App probablement ouverte (pas d\'erreur)', 'success');
-                    this.addLog('🎯 Succès présumé à: ' + new Date().toISOString(), 'success');
+                    this.addLog('✅ App probablement ouverte avec succès', 'success');
                     resolve(true);
                 }, 2000);
             });
@@ -245,31 +244,29 @@ class AppRedirectHandler {
     }
 
     async handleIOSRedirect(deeplink, linkData) {
-        this.addLog('🍎 iOS redirect - deeplink: ' + deeplink, 'info');
-        this.addLog('🍎 iOS app ID: ' + this.config.iosAppId, 'info');
-        this.addLog('🗺️ Route actuelle: ' + window.location.href, 'info');
-        this.addLog('📊 User Agent: ' + navigator.userAgent, 'info');
+        this.addLog('🍎 ÉTAPE 3B: iOS redirect avec open-native-app', 'info');
+        this.addLog('🔗 Deeplink: ' + deeplink, 'info');
+        this.addLog('📱 App ID: ' + this.config.iosAppId, 'info');
         
         // Utiliser open-native-app pour iOS aussi
         if (typeof openApp !== 'undefined') {
-            this.addLog('🚀 Utilisation de open-native-app pour iOS', 'info');
-            this.addLog('⏰ Tentative d\'ouverture iOS à: ' + new Date().toISOString(), 'info');
+            this.addLog('🚀 Tentative d\'ouverture avec open-native-app', 'info');
             
             return new Promise((resolve) => {
                 openApp.open(
                     deeplink,
                     (code) => {
-                        this.addLog('📱 Callback iOS plateforme: ' + code, 'info');
-                        this.addLog('❌ App iOS non installée ou refusée', 'error');
-                        this.addLog('⏰ Échec iOS à: ' + new Date().toISOString(), 'error');
-                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.addLog('❌ App non installée ou refusée (code: ' + code + ')', 'error');
+                        this.addLog('🏪 ÉTAPE 4: Redirection vers App Store', 'info');
                         this.saveDeferredLink(linkData);
+                        this.redirectToStore('ios');
                         resolve(false);
                     },
                     () => {
-                        this.addLog('❌ Erreur lors de l\'ouverture iOS', 'error');
-                        this.addLog('💾 Sauvegarde deferred link...', 'info');
+                        this.addLog('❌ Erreur lors de l\'ouverture', 'error');
+                        this.addLog('🏪 ÉTAPE 4: Redirection vers App Store', 'info');
                         this.saveDeferredLink(linkData);
+                        this.redirectToStore('ios');
                         resolve(false);
                     },
                     3000 // Timeout de 3 secondes
@@ -277,8 +274,7 @@ class AppRedirectHandler {
                 
                 // Si pas de callback d'erreur dans les 2 secondes, considérer comme succès
                 setTimeout(() => {
-                    this.addLog('✅ App iOS probablement ouverte (pas d\'erreur)', 'success');
-                    this.addLog('🎯 Succès iOS présumé à: ' + new Date().toISOString(), 'success');
+                    this.addLog('✅ App probablement ouverte avec succès', 'success');
                     resolve(true);
                 }, 2000);
             });
