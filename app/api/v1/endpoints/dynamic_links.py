@@ -109,7 +109,39 @@ def create_project_link(
         project_id=project_id, 
         created_by=str(current_user.id)
     )
-    return link
+    
+    base_url = "https://synctra.link"
+    short_url = f"{base_url}/{link.short_code}"
+    
+    link_dict = {
+        "id": str(link.id),
+        "project_id": str(link.project_id),
+        "short_code": link.short_code,
+        "short_url": short_url,
+        "original_url": link.original_url,
+        "title": link.title,
+        "description": link.description,
+        "android_package": link.android_package,
+        "android_fallback_url": link.android_fallback_url,
+        "ios_bundle_id": link.ios_bundle_id,
+        "ios_fallback_url": link.ios_fallback_url,
+        "desktop_fallback_url": link.desktop_fallback_url,
+        "utm_source": link.utm_source,
+        "utm_medium": link.utm_medium,
+        "utm_campaign": link.utm_campaign,
+        "utm_term": link.utm_term,
+        "utm_content": link.utm_content,
+        "link_type": link.link_type,
+        "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+        "is_active": link.is_active,
+        "clicks": 0,
+        "conversions": 0,
+        "created_by": str(link.created_by),
+        "created_at": link.created_at.isoformat(),
+        "updated_at": link.updated_at.isoformat()
+    }
+    
+    return link_dict
 
 
 @router.get("/{project_id}/links/{link_id}", response_model=schemas.DynamicLink)
@@ -131,7 +163,50 @@ def read_project_link(
     if not link or str(link.project_id) != project_id:
         raise HTTPException(status_code=404, detail="Lien non trouvé")
     
-    return link
+    # Enrichir avec les statistiques pour la réponse
+    clicks_count = db.query(func.count(models.LinkClick.id)).filter(
+        models.LinkClick.link_id == link.id
+    ).scalar() or 0
+    
+    conversions_count = db.query(func.count(models.LinkClick.id)).filter(
+        models.LinkClick.link_id == link.id,
+        models.LinkClick.converted == True
+    ).scalar() or 0
+    
+    # Construire l'URL courte complète
+    base_url = "https://link.synctra.com"
+    short_url = f"{base_url}/{link.short_code}"
+    
+    # Créer un objet enrichi pour la réponse
+    link_dict = {
+        "id": str(link.id),
+        "project_id": str(link.project_id),
+        "short_code": link.short_code,
+        "short_url": short_url,
+        "original_url": link.original_url,
+        "title": link.title,
+        "description": link.description,
+        "android_package": link.android_package,
+        "android_fallback_url": link.android_fallback_url,
+        "ios_bundle_id": link.ios_bundle_id,
+        "ios_fallback_url": link.ios_fallback_url,
+        "desktop_fallback_url": link.desktop_fallback_url,
+        "utm_source": link.utm_source,
+        "utm_medium": link.utm_medium,
+        "utm_campaign": link.utm_campaign,
+        "utm_term": link.utm_term,
+        "utm_content": link.utm_content,
+        "link_type": link.link_type,
+        "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+        "is_active": link.is_active,
+        "clicks": clicks_count,
+        "conversions": conversions_count,
+        "created_by": str(link.created_by),
+        "created_at": link.created_at.isoformat(),
+        "updated_at": link.updated_at.isoformat()
+    }
+    
+    return link_dict
 
 
 @router.put("/{project_id}/links/{link_id}", response_model=schemas.DynamicLink)
